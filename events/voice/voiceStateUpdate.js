@@ -1,4 +1,4 @@
-const { ChannelType, PermissionFlagsBits } = require('discord.js');
+const { ChannelType, PermissionFlagsBits, EnbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder, TextChannel } = require('discord.js');
 const mysql = require('mysql');
 const env = require('dotenv').config();
 
@@ -9,6 +9,8 @@ const conn = mysql.createPool({
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
 });
+
+let gameCounter = 0;
 
 module.exports = {
   name: 'voiceStateUpdate',
@@ -50,8 +52,9 @@ async function getChannelData(guildId) {
 }
 
 async function createGameChannels(guild, members, gamemode) {
-  const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-  const categoryName = `Game-${gamemode}-${uniqueId}`;
+  gameCounter++;
+  const gameNumber = gameCounter;
+  const categoryName = `Game-${gamemode}-${gameNumber}`;
 
   try {
     const category = await guild.channels.create({
@@ -70,13 +73,13 @@ async function createGameChannels(guild, members, gamemode) {
     });
 
     await guild.channels.create({
-      name: `game-${uniqueId}`,
+      name: `game-${gameNumber}`,
       type: ChannelType.GuildVoice,
       parent: category.id,
     });
 
-    await guild.channels.create({
-      name: `game-${uniqueId}`,
+    const textChannel = await guild.channels.create({
+      name: `game-${gameNumber}`,
       type: ChannelType.GuildText,
       parent: category.id,
     });
@@ -86,7 +89,26 @@ async function createGameChannels(guild, members, gamemode) {
       await member.voice.setChannel(newVoiceChannel);
     }
 
-    console.log(`Created game channels for ${gamemode} with ID: ${uniqueId}`);
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('Team Selection')
+      .setDescription('Choose which method you want to use to pick teams:');
+
+    const row = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId('random:0:0')
+          .setLabel('Random (0)')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('choose:0:0')
+          .setLabel('Choose (0)')
+          .setStyle(ButtonStyle.Primary)
+      );
+  
+    await textChannel.send({ embeds: [embed], components: [row] });
+  
+    console.log(`Created game channels for ${gamemode} with number: ${gameNumber}`);
   } catch (error) {
     console.error('Error creating game channels:', error);
   }

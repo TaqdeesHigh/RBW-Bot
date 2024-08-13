@@ -1,5 +1,6 @@
 {
     "testServer": "",
     "devs": ["378606584802050049"], 
-    "ThemeColor": "#B897FF"
+    "ThemeColor": "#B897FF",
+    "embedCorrect": "#00FF00"
 }

@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+
 module.exports = {
   async execute(textChannel, voiceChannel, gamemode) {
     if (!voiceChannel || !voiceChannel.members) {
@@ -40,5 +41,36 @@ module.exports = {
     });
 
     await textChannel.send({ embeds: [embed] });
+
+    // Create new category and team channels
+    const guild = textChannel.guild;
+    const gameStartedCategory = await guild.channels.create({
+      name: 'Game-Started',
+      type: 4, // 4 is the channel type for categories
+    });
+
+    const teamChannels = await Promise.all([
+      guild.channels.create({
+        name: 'team-1',
+        type: 2, // 2 is the channel type for voice channels
+        parent: gameStartedCategory.id,
+      }),
+      guild.channels.create({
+        name: 'team-2',
+        type: 2,
+        parent: gameStartedCategory.id,
+      }),
+    ]);
+
+    // Move players to their respective team channels
+    for (let i = 0; i < teams.length; i++) {
+      for (const member of teams[i]) {
+        await member.voice.setChannel(teamChannels[i]);
+      }
+    }
+
+    // Delete the old channel
+    await textChannel.delete();
+    await voiceChannel.delete();
   }
 };

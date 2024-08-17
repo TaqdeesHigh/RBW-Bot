@@ -39,17 +39,16 @@ module.exports = {
         if (remainingMembers.length === 0) break;
 
         const selectionEmbed = new EmbedBuilder()
-        .setColor('#1E90FF')
-        .setTitle(`Team ${j + 1} Selection`)
-        .setDescription(`${captains[j].user}, choose a player for your team by mentioning them.`)
-        .addFields({
-          name: 'Available Players',
-          value: remainingMembers.map(member => member.user.username).join('\n')
-        })
-        .setTimestamp();
+          .setColor('#1E90FF')
+          .setTitle(`Team ${j + 1} Selection`)
+          .setDescription(`${captains[j].user}, choose a player for your team by mentioning them.`)
+          .addFields({
+            name: 'Available Players',
+            value: remainingMembers.map(member => member.user.username).join('\n')
+          })
+          .setTimestamp();
 
-      await textChannel.send({ embeds: [selectionEmbed] });
-
+        await textChannel.send({ embeds: [selectionEmbed] });
 
         const filter = m => m.author.id === captains[j].id && m.mentions.members.size > 0;
         const collector = new MessageCollector(textChannel, { filter, max: 1, time: 30000 });
@@ -85,7 +84,7 @@ module.exports = {
     }
 
     const finalEmbed = new EmbedBuilder()
-      .setColor('config.embedCorrect')
+      .setColor('#00FF00')
       .setTitle('🏆 Final Team Assignments')
       .setTimestamp();
 
@@ -98,5 +97,36 @@ module.exports = {
     });
 
     await textChannel.send({ embeds: [finalEmbed] });
+
+    // Create new category and team channels
+    const guild = textChannel.guild;
+    const gameStartedCategory = await guild.channels.create({
+      name: 'Game-Started',
+      type: 4, // 4 is the channel type for categories
+    });
+
+    const teamChannels = await Promise.all([
+      guild.channels.create({
+        name: 'team-1',
+        type: 2, // 2 is the channel type for voice channels
+        parent: gameStartedCategory.id,
+      }),
+      guild.channels.create({
+        name: 'team-2',
+        type: 2,
+        parent: gameStartedCategory.id,
+      }),
+    ]);
+
+    // Move players to their respective team channels
+    for (let i = 0; i < teams.length; i++) {
+      for (const member of teams[i]) {
+        await member.voice.setChannel(teamChannels[i]);
+      }
+    }
+
+    // Delete the old channel
+    await textChannel.delete();
+    await voiceChannel.delete();
   }
 };

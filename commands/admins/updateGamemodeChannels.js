@@ -1,14 +1,5 @@
 const { SlashCommandBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
-const mysql = require('mysql');
-const env = require('dotenv').config();
-
-const conn = mysql.createPool({
-  port: process.env.DB_PORT,
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-});
+const { query } = require('../../database');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -76,17 +67,8 @@ async function updateGamemodeChannels(interaction) {
   }
 }
 
-function getExistingData(guildId) {
-  return new Promise((resolve, reject) => {
-    const sql = 'SELECT * FROM others WHERE guild_id = ?';
-    conn.query(sql, [guildId], (err, results) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(results[0]);
-      }
-    });
-  });
+async function getExistingData(guildId) {
+  return query('others', 'findOne', { guild_id: guildId });
 }
 
 async function deleteExistingChannels(guild, data) {
@@ -97,26 +79,16 @@ async function deleteExistingChannels(guild, data) {
   }
 }
 
-function updateDatabase(guildId, categoryId, channelIds) {
-  return new Promise((resolve, reject) => {
-    const sql = `
-      INSERT INTO others (guild_id, category_id, channel_4v4, channel_3v3, channel_2v2)
-      VALUES (?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE
-        category_id = VALUES(category_id),
-        channel_4v4 = VALUES(channel_4v4),
-        channel_3v3 = VALUES(channel_3v3),
-        channel_2v2 = VALUES(channel_2v2)
-    `;
-    const values = [guildId, categoryId, channelIds['4v4'], channelIds['3v3'], channelIds['2v2']];
-
-    conn.query(sql, values, (err, result) => {
-      if (err) {
-        console.error('Database error:', err);
-        reject(err);
-      } else {
-        resolve(result);
+async function updateDatabase(guildId, categoryId, channelIds) {
+  await query('others', 'updateOne', 
+    { guild_id: guildId },
+    { $set: {
+        category_id: categoryId,
+        channel_4v4: channelIds['4v4'],
+        channel_3v3: channelIds['3v3'],
+        channel_2v2: channelIds['2v2']
       }
-    });
-  });
+    },
+    { upsert: true }
+  );
 }

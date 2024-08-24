@@ -1,14 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const mysql = require('mysql');
-const env = require('dotenv').config();
-
-const conn = mysql.createPool({
-  port: process.env.DB_PORT,
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-});
+const { query } = require('../../database');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -50,18 +41,7 @@ module.exports = {
   },
 };
 
-function checkUserExists(userId) {
-  return new Promise((resolve, reject) => {
-    conn.query(
-      'SELECT * FROM registered WHERE discord_id = ?',
-      [userId],
-      (err, result) => {
-        if (err) {
-          console.error(err);
-          reject(err);
-        }
-        resolve(result.length > 0);
-      }
-    );
-  });
+async function checkUserExists(userId) {
+  const result = await query('registered', 'findOne', { discord_id: userId });
+  return result !== null;
 }

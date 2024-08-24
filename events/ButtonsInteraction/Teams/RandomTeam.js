@@ -1,7 +1,8 @@
+// RandomTeams.js
 const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
-  async execute(textChannel, voiceChannel, gamemode) {
+  async execute(textChannel, voiceChannel, gamemode, client) {
     if (!voiceChannel || !voiceChannel.members) {
       await textChannel.send("Error: Voice channel not found or has no members.");
       return;
@@ -68,6 +69,14 @@ module.exports = {
         await member.voice.setChannel(teamChannels[i]);
       }
     }
+
+    client.emit('gameStart', {
+      gameNumber,
+      gamemode,
+      selectionMethod: 'Random',
+      teams,
+      startTime: new Date()
+    });
 
     // Delete the old channel
     await textChannel.delete();

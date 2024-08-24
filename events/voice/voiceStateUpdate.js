@@ -1,14 +1,5 @@
-const { ChannelType, PermissionFlagsBits, EnbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder, TextChannel } = require('discord.js');
-const mysql = require('mysql');
-const env = require('dotenv').config();
-
-const conn = mysql.createPool({
-  port: process.env.DB_PORT,
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-});
+const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { query } = require('../../database');
 
 let gameCounter = 0;
 
@@ -38,17 +29,7 @@ module.exports = {
 };
 
 async function getChannelData(guildId) {
-  return new Promise((resolve, reject) => {
-    const sql = 'SELECT * FROM others WHERE guild_id = ?';
-    conn.query(sql, [guildId], (err, results) => {
-      if (err) {
-        console.error('Database error:', err);
-        reject(err);
-      } else {
-        resolve(results[0]);
-      }
-    });
-  });
+  return query('others', 'findOne', { guild_id: guildId });
 }
 
 async function createGameChannels(guild, members, gamemode) {
@@ -104,12 +85,12 @@ async function createGameChannels(guild, members, gamemode) {
           .setCustomId('choose:0:0')
           .setLabel('Choose (0)')
           .setStyle(ButtonStyle.Primary)
-      );
-  
-    await textChannel.send({ embeds: [embed], components: [row] });
-  
-    console.log(`Created game channels for ${gamemode} with number: ${gameNumber}`);
-  } catch (error) {
-    console.error('Error creating game channels:', error);
+        );
+    
+      await textChannel.send({ embeds: [embed], components: [row] });
+    
+      console.log(`Created game channels for ${gamemode} with number: ${gameNumber}`);
+    } catch (error) {
+      console.error('Error creating game channels:', error);
+    }
   }
-}

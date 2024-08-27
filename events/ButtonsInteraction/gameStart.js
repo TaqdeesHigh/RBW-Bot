@@ -5,7 +5,7 @@ const ChooseTeams = require('./Teams/ChooseTeams.js');
 
 module.exports = {
   name: 'interactionCreate',
-  async execute(interaction) {
+  async execute(interaction, client) {
     if (!interaction.isButton()) return;
 
     const [action, randomVotes, chooseVotes] = interaction.customId.split(':');

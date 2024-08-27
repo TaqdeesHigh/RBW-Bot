@@ -1,5 +1,6 @@
 const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { query } = require('../../database');
+const { sendUnregisteredWarning } = require('../Warnings/warning');
 
 let gameCounter = 0;
 
@@ -22,7 +23,12 @@ module.exports = {
       if (!gamemode) return;
       const requiredPlayers = parseInt(gamemode.charAt(0)) * 2;
       if (channel.members.size === requiredPlayers) {
-        await createGameChannels(newState.guild, channel.members, gamemode);
+        const unregisteredUsers = await checkRegisteredUsers(channel.members);
+        if (unregisteredUsers.length > 0) {
+          await sendUnregisteredWarning(channel, unregisteredUsers, gamemode);
+        } else {
+          await createGameChannels(newState.guild, channel.members, gamemode);
+        }
       }
     }
   },
@@ -30,6 +36,17 @@ module.exports = {
 
 async function getChannelData(guildId) {
   return query('others', 'findOne', { guild_id: guildId });
+}
+
+async function checkRegisteredUsers(members) {
+  const unregisteredUsers = [];
+  for (const [id, member] of members) {
+    const isRegistered = await query('registered', 'findOne', { discord_id: id });
+    if (!isRegistered) {
+      unregisteredUsers.push(member);
+    }
+  }
+  return unregisteredUsers;
 }
 
 async function createGameChannels(guild, members, gamemode) {
@@ -94,3 +111,19 @@ async function createGameChannels(guild, members, gamemode) {
       console.error('Error creating game channels:', error);
     }
   }
+
+async function handleButtonInteraction(interaction) {
+  if (!interaction.isButton()) return;
+
+  const [action, gamemode] = interaction.customId.split(':');
+
+  if (action === 'start_game') {
+    await interaction.update({ content: 'Starting the game...', components: [] });
+    await createGameChannels(interaction.guild, interaction.message.mentions.members, gamemode);
+  } else if (action === 'cancel_game') {
+    await interaction.update({ content: 'Game cancelled.', components: [] });
+  }
+}
+
+// Export the handleButtonInteraction function
+module.exports.handleButtonInteraction = handleButtonInteraction;

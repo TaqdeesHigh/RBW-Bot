@@ -1,8 +1,10 @@
 // ChooseTeams.js
-const { MessageCollector, EmbedBuilder } = require('discord.js');
+const { MessageCollector, EmbedBuilder, PermissionsBitField } = require('discord.js');
 
 module.exports = {
   async execute(textChannel, voiceChannel, gamemode, client) {
+    const gameNumber = textChannel.name.split('-')[1];
+
     if (!voiceChannel || !voiceChannel.members) {
       await textChannel.send("Error: Voice channel not found or has no members.");
       return;
@@ -99,11 +101,24 @@ module.exports = {
 
     await textChannel.send({ embeds: [finalEmbed] });
 
+    // Get the user who started the game (assuming they're the first member in the voice channel)
+    const gameStarter = members[0];
+
     // Create new category and team channels
     const guild = textChannel.guild;
     const gameStartedCategory = await guild.channels.create({
       name: 'Game-Started',
       type: 4, // 4 is the channel type for categories
+      permissionOverwrites: [
+        {
+          id: guild.roles.everyone.id,
+          deny: [PermissionsBitField.Flags.ViewChannel],
+        },
+        {
+          id: gameStarter.id,
+          allow: [PermissionsBitField.Flags.ViewChannel],
+        },
+      ],
     });
 
     const teamChannels = await Promise.all([
@@ -111,17 +126,34 @@ module.exports = {
         name: 'team-1',
         type: 2, // 2 is the channel type for voice channels
         parent: gameStartedCategory.id,
+        permissionOverwrites: [
+          {
+            id: guild.roles.everyone.id,
+            deny: [PermissionsBitField.Flags.ViewChannel],
+          },
+        ],
       }),
       guild.channels.create({
         name: 'team-2',
         type: 2,
         parent: gameStartedCategory.id,
+        permissionOverwrites: [
+          {
+            id: guild.roles.everyone.id,
+            deny: [PermissionsBitField.Flags.ViewChannel],
+          },
+        ],
       }),
     ]);
 
-    // Move players to their respective team channels
+    // Move players to their respective team channels and grant them access
     for (let i = 0; i < teams.length; i++) {
       for (const member of teams[i]) {
+        await teamChannels[i].permissionOverwrites.create(member.id, {
+          ViewChannel: true,
+          Connect: true,
+          Speak: true,
+        });
         await member.voice.setChannel(teamChannels[i]);
       }
     }
@@ -133,9 +165,8 @@ module.exports = {
       teams,
       startTime: new Date()
     });
-    
 
-    // Delete the old channel
+    // Delete the old channels
     await textChannel.delete();
     await voiceChannel.delete();
   }

@@ -1,6 +1,6 @@
 const { ClusterClient, getInfo } = require("discord-hybrid-sharding");
-const { Client, GatewayIntentBits, Partials, Collection, Embed, EmbedBuilder } = require("discord.js");
-// const { handleButtonInteraction } = require('./events/voiceStateUpdate');
+const { Client, GatewayIntentBits, Partials, Collection } = require("discord.js");
+const GameLogger = require('./events/Logs/gameLogger');
 const env = require("dotenv").config();
 
 const { Guilds, GuildMembers, GuildMessages, MessageContent, GuildVoiceStates } = GatewayIntentBits;
@@ -13,15 +13,16 @@ const client = new Client({
   shards: getInfo().SHARD_LIST,
   shardCount: getInfo().TOTAL_SHARDS,
   intents: [Guilds, GuildMembers, GuildMessages, MessageContent, GuildVoiceStates],
-  Partials: [User, Message, GuildMember, ThreadMember],
+  partials: [User, Message, GuildMember, ThreadMember],
 });
 
 client.commands = new Collection();
-
 client.cluster = new ClusterClient(client);
 
+// Initialize GameLogger after client is created
+const gameLogger = new GameLogger(client);
+
 client.login(process.env.token).then(() => {
-  loadEvents(client);
+  loadEvents(client, gameLogger);
   loadCommands(client);
 });
-

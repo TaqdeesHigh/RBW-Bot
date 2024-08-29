@@ -1,8 +1,9 @@
-// RandomTeams.js
 const { EmbedBuilder, PermissionsBitField } = require('discord.js');
+const GameLogger = require('../../Logs/gameLogger');
 
 module.exports = {
   async execute(textChannel, voiceChannel, gamemode, client) {
+    const gameLogger = new GameLogger(client);
     const gameNumber = textChannel.name.split('-')[1];
 
     if (!voiceChannel || !voiceChannel.members) {
@@ -65,20 +66,11 @@ module.exports = {
       ],
     });
 
-    const teamChannels = await Promise.all([
+    const allParticipants = teams.flat();
+
+    const teamChannels = await Promise.all(teams.map((team, index) => 
       guild.channels.create({
-        name: 'team-1',
-        type: 2, // 2 is the channel type for voice channels
-        parent: gameStartedCategory.id,
-        permissionOverwrites: [
-          {
-            id: guild.roles.everyone.id,
-            deny: [PermissionsBitField.Flags.ViewChannel],
-          },
-        ],
-      }),
-      guild.channels.create({
-        name: 'team-2',
+        name: `team-${index + 1}`,
         type: 2,
         parent: gameStartedCategory.id,
         permissionOverwrites: [
@@ -86,23 +78,27 @@ module.exports = {
             id: guild.roles.everyone.id,
             deny: [PermissionsBitField.Flags.ViewChannel],
           },
+          ...allParticipants.map(member => ({
+            id: member.id,
+            allow: [PermissionsBitField.Flags.ViewChannel],
+            deny: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+          })),
+          ...team.map(member => ({
+            id: member.id,
+            allow: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+          })),
         ],
-      }),
-    ]);
+      })
+    ));
 
-    // Move players to their respective team channels and grant them access
+    // Move players to their respective team channels
     for (let i = 0; i < teams.length; i++) {
       for (const member of teams[i]) {
-        await teamChannels[i].permissionOverwrites.create(member.id, {
-          ViewChannel: true,
-          Connect: true,
-          Speak: true,
-        });
         await member.voice.setChannel(teamChannels[i]);
       }
     }
 
-    client.emit('gameStart', {
+    await gameLogger.logGameStart({
       gameNumber,
       gamemode,
       selectionMethod: 'Random',

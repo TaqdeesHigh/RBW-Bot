@@ -2,31 +2,30 @@ const ascii = require('ascii-table');
 const fs = require('fs');
 const path = require('path');
 
-function loadEvents(client) {
+function loadEvents(client, gameLogger) {
     const table = new ascii().setHeading('Events', 'Status');
     const eventsPath = path.join(__dirname, '..', 'events');
+
     function loadEvent(filePath) {
         const event = require(filePath);
         if (event.rest) {
             if (event.once)
-                client.rest.once(event.name, (...args) => event.execute(...args, client));
+                client.rest.once(event.name, (...args) => event.execute(...args, client, gameLogger));
             else
-                client.rest.on(event.name, (...args) => event.execute(...args, client));
+                client.rest.on(event.name, (...args) => event.execute(...args, client, gameLogger));
         } else {
             if (event.once)
-                client.once(event.name, (...args) => event.execute(...args, client));
-            else 
-                client.on(event.name, (...args) => event.execute(...args, client));
+                client.once(event.name, (...args) => event.execute(...args, client, gameLogger));
+            else
+                client.on(event.name, (...args) => event.execute(...args, client, gameLogger));
         }
         table.addRow(path.basename(filePath), '✅');
     }
 
     const eventFiles = fs.readdirSync(eventsPath);
-
     for (const file of eventFiles) {
         const filePath = path.join(eventsPath, file);
         const stat = fs.statSync(filePath);
-
         if (stat.isDirectory()) {
             const files = fs.readdirSync(filePath).filter((f) => f.endsWith(".js"));
             for (const nestedFile of files) {

@@ -2,7 +2,5 @@
     "testServer": "",
     "devs": ["378606584802050049, 1185618985518116925"], 
     "ThemeColor": "#B897FF",
-    "embedCorrect": "#00FF00",
-    "logsChannel": "1276798994085056623",
-    "BASE_PATH": "./events/Logs/Images"
+    "embedCorrect": "#00FF00"
 }

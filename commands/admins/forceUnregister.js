@@ -18,7 +18,6 @@ module.exports = {
     const targetUser = interaction.options.getUser("user");
 
     try {
-      // Check if the user is registered
       const existingUser = await query('registered', 'findOne', { discord_id: targetUser.id });
       if (!existingUser) {
         return interaction.editReply({
@@ -27,13 +26,10 @@ module.exports = {
         });
       }
 
-      // Unregister the user
       await query('registered', 'deleteOne', { discord_id: targetUser.id });
 
-      // Remove stats
       await query('stats', 'deleteOne', { discord_id: targetUser.id });
 
-      // Reset nickname
       const member = await interaction.guild.members.fetch(targetUser.id);
       try {
         if (member.guild.members.me.permissions.has('ManageNicknames') && 

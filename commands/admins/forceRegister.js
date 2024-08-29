@@ -25,7 +25,6 @@ module.exports = {
     const playerName = interaction.options.getString("player");
 
     try {
-      // Check if the user is already registered
       const existingUser = await query('registered', 'findOne', { discord_id: targetUser.id });
       if (existingUser) {
         return interaction.editReply({
@@ -34,10 +33,8 @@ module.exports = {
         });
       }
 
-      // Check if the Minecraft player exists
       await axios.get(`https://api.ngmc.co/v1/players/${playerName}`);
 
-      // Check if the Minecraft player is already registered
       const existingPlayer = await query('registered', 'findOne', { mc_user: playerName });
       if (existingPlayer) {
         return interaction.editReply({
@@ -46,19 +43,16 @@ module.exports = {
         });
       }
 
-      // Register the user
       await query('registered', 'insertOne', {
         mc_user: playerName,
         discord_user: targetUser.username,
         discord_id: targetUser.id
       });
 
-      // Initialize stats
       await query('stats', 'insertOne', {
         discord_id: targetUser.id
       });
 
-      // Update nickname
       const member = await interaction.guild.members.fetch(targetUser.id);
       await updateNickname(member, playerName, 0);
 

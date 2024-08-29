@@ -1,3 +1,4 @@
+const { EmbedBuilder } = require('discord.js');
 const { query } = require('../../database');
 
 module.exports = {
@@ -6,15 +7,14 @@ module.exports = {
     if (!interaction.isButton()) return;
 
     if (interaction.customId === 'unregister_proceed') {
-      await unregisterUser(interaction.user.id);
-      await interaction.update({ content: 'You have been successfully unregistered.', embeds: [], components: [] });
+      await unregisterUser(interaction.user.id, interaction);
     } else if (interaction.customId === 'unregister_cancel') {
-      await interaction.update({ content: 'Unregistration cancelled.', embeds: [], components: [] });
+      const cancelEmbed = new EmbedBuilder()
+        .setColor('#00FF00')
+        .setTitle('Unregistration Cancelled')
+        .setDescription('Your unregistration request has been cancelled.');
+
+      await interaction.update({ embeds: [cancelEmbed], components: [] });
     }
   },
 };
-
-async function unregisterUser(userId) {
-  await query('registered', 'deleteOne', { discord_id: userId });
-  await query('stats', 'deleteOne', { discord_id: userId });
-}

@@ -1,5 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require("discord.js");
-const { ThemeColor } = require("../../config.json");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const axios = require("axios");
 const { query } = require("../../database");
 
@@ -10,15 +9,25 @@ module.exports = {
     .addStringOption((option) =>
       option.setName("name").setDescription("Your name").setRequired(true)
     ),
-
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
-
     try {
       const name = interaction.options.getString("name");
-
       const res = await axios.get(`https://api.ngmc.co/v1/players/${name}`);
       
+      function createEmbed(title, description, color = '#0099ff') {
+        return new EmbedBuilder()
+          .setTitle(title)
+          .setDescription(description)
+          .setColor(color)
+          .setTimestamp();
+      }
+
+      if (res.data.banned === true) {
+        const embed = createEmbed('Registration Failed', 'You are banned from the server.', '#FF0000');
+        return interaction.editReply({ embeds: [embed], ephemeral: true });
+      }
+     
       async function checkDiscordUser(discord_id) {
         const result = await query('registered', 'findOne', { discord_id });
         return result !== null;
@@ -28,25 +37,17 @@ module.exports = {
         const result = await query('registered', 'findOne', { mc_user });
         return result !== null;
       }
-
       async function insertData() {
         const mcuser = await checkMinecraftUser(name);
         const discorduser = await checkDiscordUser(interaction.user.id);
-
         if (discorduser) {
-          return interaction.editReply({
-            content: "You are already registered",
-            ephemeral: true,
-          });
+          const embed = createEmbed('Registration Failed', 'You are already registered.', '#FFA500');
+          return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
-
         if (mcuser) {
-          return interaction.editReply({
-            content: "Player already registered",
-            ephemeral: true,
-          });
+          const embed = createEmbed('Registration Failed', 'Player already registered.', '#FFA500');
+          return interaction.editReply({ embeds: [embed], ephemeral: true });
         }
-
         if (!mcuser && !discorduser) {
           try {
             await query('registered', 'insertOne', {
@@ -54,29 +55,23 @@ module.exports = {
               discord_user: interaction.user.username,
               discord_id: interaction.user.id
             });
-
             await query('stats', 'insertOne', {
               discord_id: interaction.user.id
             });
-
             await updateNickname(interaction.member, name, 0);
-            return interaction.editReply({
-              content: "You are now registered and your stats have been initialized",
-              ephemeral: true,
-            });
+            const embed = createEmbed('Registration Successful', 'You are now registered and your stats have been initialized.', '#00FF00');
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
           } catch (error) {
             console.error(error);
-            return interaction.editReply({
-              content: "Error registering user",
-              ephemeral: true,
-            });
+            const embed = createEmbed('Registration Failed', 'Error registering user.', '#FF0000');
+            return interaction.editReply({ embeds: [embed], ephemeral: true });
           }
         }
       }
-
+      
       async function updateNickname(member, name, elo) {
         try {
-          if (member.guild.members.me.permissions.has('ManageNicknames') && 
+          if (member.guild.members.me.permissions.has('ManageNicknames') &&
               member.manageable) {
             await member.setNickname(`${elo} - ${name}`);
           } else {
@@ -86,14 +81,11 @@ module.exports = {
           console.error("Failed to update nickname:", error);
         }
       }
-
       await insertData();
     } catch (error) {
       console.log(error);
-      return interaction.editReply({
-        content: "Player not found",
-        ephemeral: true,
-      });
+      const embed = createEmbed('Registration Failed', 'Player not found.', '#FF0000');
+      return interaction.editReply({ embeds: [embed], ephemeral: true });
     }
   },
 };

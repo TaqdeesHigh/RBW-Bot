@@ -19,10 +19,13 @@ const client = new Client({
 client.commands = new Collection();
 client.cluster = new ClusterClient(client);
 
-// Initialize GameLogger after client is created
 const gameLogger = new GameLogger(client);
 
 client.login(process.env.token).then(() => {
   loadEvents(client, gameLogger);
   loadCommands(client);
+});
+
+client.once('ready', () => {
+  console.log('Bot is ready!');
 });

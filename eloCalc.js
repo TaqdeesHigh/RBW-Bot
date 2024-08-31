@@ -1,84 +1,95 @@
-const eloData = require('./config.json').eloData;
-const rank = require('./config.json').ranks;
-const mysql = require('mysql');
+const config = require('./config.json');
+const { query } = require('./database');
 
-
-function getRankForElo(elo, ranks) { //Don't worry about this function, it's just to get the rank for the elo
-    let previousThreshold = 0;
-    const thresholds = Object.keys(ranks).map(Number).sort((a, b) => a - b);
-
+function getRankForElo(elo) {
+    const thresholds = Object.keys(config.ranks).map(Number).sort((a, b) => b - a);
     for (const threshold of thresholds) {
-        if (elo < threshold) {
-            return ranks[previousThreshold];
+        if (elo >= threshold) {
+            return config.ranks[threshold];
         }
-        previousThreshold = threshold;
+    }
+    return config.ranks[0]; // Default to lowest rank
+}
+
+function getEloDataForRank(rank) {
+    return config.eloData[rank];
+}
+
+async function updatePlayerStats(playerId, eloChange, winIncrement, lossIncrement) {
+    const player = await query('stats', 'findOne', { discord_id: playerId });
+    
+    if (!player) {
+        console.error(`Player with discord_id ${playerId} not found`);
+        return;
     }
 
-    return ranks[previousThreshold]; 
-}
+    let newElo = Math.max(0, player.elo + eloChange);
+    let newRank = getRankForElo(newElo);
 
-
-
-async function eloCalc (winningTeam, losingTeam, mvp) { // winningTeam and losingTeam are arrays of discord IDs, mvp is a singular discord id
-    const db = mysql.createPool({
-        host: "localhost",
-        user: 'root',
-        password: '',
-        database: 'rbwbot'
-    })
-
-    winningTeam.forEach(winner => {
-        db.query(`SELECT * FROM stats WHERE discord_id = ${winner}`, (err, result) => { // Get the winner's stats
-            if (err) throw err;
-            
-            let winnerElo = result[0].elo;
-            let winnerWins = result[0].wins;
-            let winnerRank = getRankForElo(winnerElo, rank);
-
-            let winnerEloChange = eloData[winnerRank].win;
-
-            db.query(`UPDATE stats SET elo = ${winnerElo + winnerEloChange}, wins = ${winnerWins + 1} WHERE discord_id = ${winner}`, (err, result) => {
-                if (err) throw err;
-            })
-            
-        })
-    })
-
-    losingTeam.forEach(loser => {
-        db.query(`SELECT * FROM stats WHERE discord_id = ${loser}`, (err, result) => { // Get the loser's stats
-            if (err) throw err;
-            
-            let loserElo = result[0].elo;
-
-            
-
-            let loserLosses = result[0].losses;
-            let loserRank = getRankForElo(loserElo, rank);
-
-            let loserEloChange = eloData[loserRank].loss;
-
-            if (loserElo - loserEloChange < 0) {
-                loserElo = 0;
-                loserEloChange = 0;
+    await query('stats', 'updateOne', 
+        { discord_id: playerId },
+        { 
+            $set: { 
+                elo: newElo, 
+                rank: newRank
+            },
+            $inc: { 
+                wins: winIncrement, 
+                losses: lossIncrement
             }
+        }
+    );
 
-            db.query(`UPDATE stats SET elo = ${loserElo - loserEloChange}, losses = ${loserLosses + 1} WHERE discord_id = ${loser}`, (err, result) => {
-                if (err) throw err;
-            })
-            
-        })
-    })
-
-    db.query(`SELECT * FROM stats WHERE discord_id = ${mvp}`, (err, result) => { // Get the MVP's stats
-        if (err) throw err;
-        const mvpElo = result[0].elo;
-               db.query(`UPDATE stats SET elo = ${mvpElo + 5} WHERE discord_id = ${mvp}`, (err, result) => {
-            if (err) throw err;
-        })
-        
-    })
+    return { oldElo: player.elo, newElo, oldRank: player.rank, newRank };
 }
 
+async function eloCalc(winningTeam, losingTeam, mvp) {
+    const results = {
+        winners: [],
+        losers: [],
+        mvp: null
+    };
 
+    for (const winner of winningTeam) {
+        const player = await query('stats', 'findOne', { discord_id: winner });
+        if (player) {
+            const eloData = getEloDataForRank(player.rank);
+            const result = await updatePlayerStats(winner, eloData.win, 1, 0);
+            results.winners.push({ ...result, discord_id: winner });
+        }
+    }
 
-module.exports = { eloCalc };
+    for (const loser of losingTeam) {
+        const player = await query('stats', 'findOne', { discord_id: loser });
+        if (player) {
+            const eloData = getEloDataForRank(player.rank);
+            const eloLoss = player.elo > 0 ? eloData.loss : 0;
+            const result = await updatePlayerStats(loser, -eloLoss, 0, 1);
+            results.losers.push({ ...result, discord_id: loser });
+        }
+    }
+
+    if (mvp) {
+        const result = await updatePlayerStats(mvp, 5, 0, 0);
+        results.mvp = { ...result, discord_id: mvp };
+    }
+
+    return results;
+}
+
+// Function to update all players' ranks based on current config
+async function updateAllPlayerRanks() {
+    const allPlayers = await query('stats', 'find', {});
+    for (const player of allPlayers) {
+        const newRank = getRankForElo(player.elo);
+        if (newRank !== player.rank) {
+            await query('stats', 'updateOne', 
+                { discord_id: player.discord_id },
+                { $set: { rank: newRank } }
+            );
+            console.log(`Updated ${player.discord_id}'s rank from ${player.rank} to ${newRank}`);
+        }
+    }
+}
+
+module.exports = { eloCalc, updateAllPlayerRanks };

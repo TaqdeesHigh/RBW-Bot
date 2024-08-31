@@ -1,5 +1,6 @@
-const { MessageCollector, EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { MessageCollector, EmbedBuilder } = require('discord.js');
 const GameLogger = require('../../Logs/gameLogger');
+const { createGameChannel } = require('../../GameCreation/createGameChannel');
 
 module.exports = {
   async execute(textChannel, voiceChannel, gamemode, client) {
@@ -102,57 +103,8 @@ module.exports = {
 
     await textChannel.send({ embeds: [finalEmbed] });
 
-    // Get the user who started the game (assuming they're the first member in the voice channel)
-    const gameStarter = members[0];
-
-    // Create new category and team channels
     const guild = textChannel.guild;
-    const gameStartedCategory = await guild.channels.create({
-      name: 'Game-Started',
-      type: 4, // 4 is the channel type for categories
-      permissionOverwrites: [
-        {
-          id: guild.roles.everyone.id,
-          deny: [PermissionsBitField.Flags.ViewChannel],
-        },
-        {
-          id: gameStarter.id,
-          allow: [PermissionsBitField.Flags.ViewChannel],
-        },
-      ],
-    });
-
-    const allParticipants = teams.flat();
-
-    const teamChannels = await Promise.all(teams.map((team, index) => 
-      guild.channels.create({
-        name: `team-${index + 1}`,
-        type: 2,
-        parent: gameStartedCategory.id,
-        permissionOverwrites: [
-          {
-            id: guild.roles.everyone.id,
-            deny: [PermissionsBitField.Flags.ViewChannel],
-          },
-          ...allParticipants.map(member => ({
-            id: member.id,
-            allow: [PermissionsBitField.Flags.ViewChannel],
-            deny: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
-          })),
-          ...team.map(member => ({
-            id: member.id,
-            allow: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
-          })),
-        ],
-      })
-    ));
-
-    // Move players to their respective team channels
-    for (let i = 0; i < teams.length; i++) {
-      for (const member of teams[i]) {
-        await member.voice.setChannel(teamChannels[i]);
-      }
-    }
+    const { category, voiceChannel: newVoiceChannel } = await createGameChannel(guild, gameNumber, gamemode, members);
 
     await gameLogger.logGameStart({
       gameNumber,
@@ -165,5 +117,8 @@ module.exports = {
     // Delete the old channels
     await textChannel.delete();
     await voiceChannel.delete();
+
+    // Send the final team assignments to the new voice channel
+    await newVoiceChannel.send({ embeds: [finalEmbed] });
   }
 };

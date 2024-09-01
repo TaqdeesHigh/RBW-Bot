@@ -1,11 +1,11 @@
-const { MessageCollector, EmbedBuilder } = require('discord.js');
+const { MessageCollector, EmbedBuilder, PermissionsBitField } = require('discord.js');
 const GameLogger = require('../../Logs/gameLogger');
-const { createGameChannel } = require('../../GameCreation/createGameChannel');
 
 module.exports = {
   async execute(textChannel, voiceChannel, gamemode, client) {
     const gameLogger = new GameLogger(client);
     const gameNumber = textChannel.name.split('-')[1];
+    const guild = textChannel.guild;
 
     if (!voiceChannel || !voiceChannel.members) {
       await textChannel.send("Error: Voice channel not found or has no members.");
@@ -103,8 +103,33 @@ module.exports = {
 
     await textChannel.send({ embeds: [finalEmbed] });
 
-    const guild = textChannel.guild;
-    const { category, voiceChannel: newVoiceChannel } = await createGameChannel(guild, gameNumber, gamemode, members);
+    // Create team channels
+    const teamChannels = [];
+    for (let i = 0; i < 2; i++) {
+      const teamVoiceChannel = await guild.channels.create({
+        name: `Team ${i + 1} - Game ${gameNumber}`,
+        type: 2, // 2 is the channel type for voice channels
+        parent: voiceChannel.parent,
+        permissionOverwrites: [
+          {
+            id: guild.roles.everyone.id,
+            deny: [PermissionsBitField.Flags.ViewChannel],
+          },
+          ...members.map(member => ({
+            id: member.id,
+            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+          })),
+        ],
+      });
+      teamChannels.push(teamVoiceChannel);
+    }
+
+    // Move team members to their respective voice channels
+    for (let i = 0; i < 2; i++) {
+      for (const member of teams[i]) {
+        await member.voice.setChannel(teamChannels[i]).catch(console.error);
+      }
+    }
 
     await gameLogger.logGameStart({
       gameNumber,
@@ -114,11 +139,10 @@ module.exports = {
       startTime: new Date()
     });
 
-    // Delete the old channels
-    await textChannel.delete();
+    // Delete the original voice channel
     await voiceChannel.delete();
 
-    // Send the final team assignments to the new voice channel
-    await newVoiceChannel.send({ embeds: [finalEmbed] });
+    // Send the team information to the text channel
+    await textChannel.send("Team channels have been created and members have been moved. Both teams can see and join each other's channels. Good luck and have fun!");
   }
 };

@@ -32,29 +32,32 @@ module.exports = {
         const winningTeam = interaction.options.getString('winning-team');
         const proofImage = interaction.options.getAttachment('image');
     
-        const member = interaction.member;
-        const voiceChannel = member.voice.channel;
-        if (!voiceChannel || !voiceChannel.parent) {
-            return interaction.editReply('You must be in an active game voice channel to use this command.');
-        }
-    
-        // Extract game number and mode from the category name
-        const categoryNameParts = voiceChannel.parent.name.split('-');
-        const gameNumber = categoryNameParts[2];
-        const gameMode = categoryNameParts[3];
-    
-        if (!gameNumber || !gameMode) {
-            return interaction.editReply('Unable to determine game number and mode. Please check the category naming convention.');
-        }
-    
-        // Get players in each team
-        const team1Channel = interaction.guild.channels.cache.find(channel => channel.name.startsWith('team-1') && channel.parent === voiceChannel.parent);
-        const team2Channel = interaction.guild.channels.cache.find(channel => channel.name.startsWith('team-2') && channel.parent === voiceChannel.parent);
-    
-        if (!team1Channel || !team2Channel) {
-            return interaction.editReply('Could not find team channels.');
+        // Check if the command is used in the correct channel
+        if (!interaction.channel.name.startsWith('game-')) {
+            return interaction.editReply('This command can only be used in a game text channel.');
         }
 
+        const gameNumber = interaction.channel.name.split('-')[1];
+        
+        const category = interaction.channel.parent;
+        if (!category || !category.name.startsWith('Game-')) {
+            return interaction.editReply('Unable to determine game mode. Please check the category naming convention.');
+        }
+
+        const [, gameMode, categoryGameNumber] = category.name.split('-');
+
+        if (gameNumber !== categoryGameNumber) {
+            return interaction.editReply('Game number mismatch between channel and category. Please check the naming convention.');
+        }
+
+        const team1Channel = category.children.cache.find(channel => channel.name.startsWith('Team 1 - Game') && channel.type === 2);
+        const team2Channel = category.children.cache.find(channel => channel.name.startsWith('Team 2 - Game') && channel.type === 2);
+        
+        if (!team1Channel || !team2Channel) {
+            return interaction.editReply('Could not find team channels. Please ensure they are named "Team 1 - Game {number}" and "Team 2 - Game {number}".');
+        }
+        
+        // Get players in each team
         const team1Players = team1Channel.members.map(member => member.id);
         const team2Players = team2Channel.members.map(member => member.id);
 
@@ -106,30 +109,32 @@ module.exports = {
 
         await gameLogsChannel.send({ embeds: [embed] });
 
-        // Move players back to queuing channels and delete team channels
-        const otherData = await query('others', 'findOne', { guild_id: interaction.guild.id });
-        if (otherData) {
-            const queueChannelId = otherData[`channel_${gameMode}`];
-            const queueChannel = interaction.guild.channels.cache.get(queueChannelId);
+        const waitingChannelId = config.waitingChannel;
+        if (waitingChannelId) {
+            const waitingChannel = interaction.guild.channels.cache.get(waitingChannelId);
             
-            if (queueChannel) {
+            if (waitingChannel) {
                 const allPlayers = [...team1Players, ...team2Players];
                 for (const playerId of allPlayers) {
                     const player = await interaction.guild.members.fetch(playerId);
                     if (player.voice.channel) {
-                        await player.voice.setChannel(queueChannel).catch(console.error);
+                        await player.voice.setChannel(waitingChannel).catch(console.error);
                     }
                 }
+            } else {
+                console.error('Waiting channel not found');
+                await interaction.followUp('Warning: Could not find the waiting channel. Players were not moved.');
             }
-
+        
             // Delete team channels
             await team1Channel.delete().catch(console.error);
             await team2Channel.delete().catch(console.error);
-
+        
             // Delete game category
-            await voiceChannel.parent.delete().catch(console.error);
+            await category.delete().catch(console.error);
+        } else {
+            console.error('Waiting channel ID not specified in config');
+            await interaction.followUp('Warning: Waiting channel not specified in config. Players were not moved.');
         }
-
-        await interaction.editReply('Game results submitted, players moved back to queue, and channels cleaned up!');
     },
 };

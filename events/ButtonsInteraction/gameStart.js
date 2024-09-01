@@ -1,4 +1,3 @@
-// gameStart.js
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const RandomTeam = require('./Teams/RandomTeam.js');
 const ChooseTeams = require('./Teams/ChooseTeams.js');
@@ -67,23 +66,23 @@ module.exports = {
         }
 
         if (winner === 'random') {
-            const embed = new EmbedBuilder()
-              .setColor('#FF4500')
-              .setTitle(`🎲 Random Team Selection - Game ${gameNumber}`)
-              .setDescription('Random team selection has won the vote. Initiating team formation...')
-              .setTimestamp();
-            await channel.send({ embeds: [embed] });
-            await RandomTeam.execute(channel, voiceChannel, gamemode, client);
-          } else {
-            const embed = new EmbedBuilder()
-              .setColor('#4169E1')
-              .setTitle(`👥 Manual Team Selection - Game ${gameNumber}`)
-              .setDescription('Manual team selection has won the vote. Captains will now choose their teams.')
-              .setTimestamp();
-            await channel.send({ embeds: [embed] });
-            await ChooseTeams.execute(channel, voiceChannel, gamemode, client);
-          }
-        }, 15000);
-      }
-    },
+          const embed = new EmbedBuilder()
+            .setColor('#FF4500')
+            .setTitle(`🎲 Random Team Selection - Game ${gameNumber}`)
+            .setDescription('Random team selection has won the vote. Initiating team formation...')
+            .setTimestamp();
+          await channel.send({ embeds: [embed] });
+          await RandomTeam.execute(channel, voiceChannel, gamemode, client);
+        } else {
+          const embed = new EmbedBuilder()
+            .setColor('#4169E1')
+            .setTitle(`👥 Manual Team Selection - Game ${gameNumber}`)
+            .setDescription('Manual team selection has won the vote. Captains will now choose their teams.')
+            .setTimestamp();
+          await channel.send({ embeds: [embed] });
+          await ChooseTeams.execute(channel, voiceChannel, gamemode, client);
+        }
+      }, 15000);
+    }
+  },
 };

@@ -3,5 +3,81 @@
     "devs": ["378606584802050049, 1185618985518116925"], 
     "ThemeColor": "#B897FF",
     "embedCorrect": "#00FF00",
-    "logsChannel": ""
+    "logsChannel": "",
+    "GAME_LOGS": "",
+    "waitingChannel": "",
+    "ssChannel": "",
+    "ranks": {
+        "0": "bronze1",
+        "500": "bronze2",
+        "750": "silver1",
+        "1000": "silver2",
+        "1250": "gold1",
+        "1500": "gold2",
+        "1750": "platinum1",
+        "2250": "platinum2",
+        "2500": "diamond",
+        "3000": "master"
+    },
+    "eloData": {
+        "bronze1": {
+            "win": 30,
+            "loss": 10,
+            "draw": 0,
+            "nextRank": 500
+        },
+        "bronze2": {
+            "win": 28,
+            "loss": 12,
+            "draw": 0,
+            "nextRank": 750
+        },
+        "silver1": {
+            "win": 26,
+            "loss": 10,
+            "draw": 0,
+            "nextRank": 1000
+        },
+        "silver2": {
+            "win": 24,
+            "loss": 10,
+            "draw": 0,
+            "nextRank": 1250
+        },
+        "gold1": {
+            "win": 22,
+            "loss": 12,
+            "draw": 0,
+            "nextRank": 1500
+        },
+        "gold2": {
+            "win": 20,
+            "loss": 15,
+            "draw": 0,
+            "nextRank": 1750
+        },
+        "platinum1": {
+            "win": 18,
+            "loss": 15,
+            "draw": 0,
+            "nextRank": 2250
+        },
+        "platinum2": {
+            "win": 16,
+            "loss": 15,
+            "draw": 0,
+            "nextRank": 2500
+        },
+        "diamond": {
+            "win": 14,
+            "loss": 18,
+            "draw": 0,
+            "nextRank": 3000
+        },
+        "master": {
+            "win": 12,
+            "loss": 20,
+            "draw": 0
+        }
+    }
 }

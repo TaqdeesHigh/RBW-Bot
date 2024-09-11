@@ -1,6 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-const RandomTeam = require('./Teams/RandomTeam.js');
-const ChooseTeams = require('./Teams/ChooseTeams.js');
+const RandomTeam = require('../Teams/RandomTeam.js');
+const ChooseTeams = require('../Teams/ChooseTeams.js');
 
 module.exports = {
   name: 'interactionCreate',

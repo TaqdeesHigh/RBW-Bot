@@ -1,6 +1,7 @@
 const { ClusterClient, getInfo } = require("discord-hybrid-sharding");
 const { Client, GatewayIntentBits, Partials, Collection } = require("discord.js");
 const GameLogger = require('./events/Logs/gameLogger');
+const databaseManager = require('./databaseManager');
 const env = require("dotenv").config();
 
 const { Guilds, GuildMembers, GuildMessages, MessageContent, GuildVoiceStates } = GatewayIntentBits;

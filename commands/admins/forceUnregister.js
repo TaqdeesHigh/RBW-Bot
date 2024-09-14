@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
 const { query } = require("../../database");
+const errorHandler = require('../../handlers/errorHandler.js');
 
 module.exports = {
   data: new SlashCommandBuilder()

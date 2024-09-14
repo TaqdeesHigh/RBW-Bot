@@ -79,25 +79,5 @@
             "loss": 20,
             "draw": 0
         }
-    },
-
-    "database": {
-        "type": "json",
-        "connection": {
-          "mongodb": {
-            "uri": "mongodb://username:password@host:port/database",
-            "dbName": "your_database_name"
-          },
-          "mysql": {
-            "host": "localhost",
-            "user": "your_username",
-            "password": "your_password",
-            "database": "your_database_name"
-          },
-          "json": {
-            "directory": "data"
-          }
-        }
-      }
-
+    }
 }

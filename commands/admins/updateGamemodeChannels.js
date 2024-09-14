@@ -1,8 +1,6 @@
 const { SlashCommandBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
-const fs = require('fs').promises;
-const path = require('path');
-const config = require('../../config.json');
 const { query } = require('../../database');
+const errorHandler = require('../../handlers/errorHandler.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -15,29 +13,26 @@ module.exports = {
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-    async execute(interaction) {
-      if (interaction.options.getSubcommand() === 'channels') {
-        try {
-          await updateGamemodeChannels(interaction);
-        } catch (error) {
-          console.error('Error in updateGamemodeChannels:', error);
-          await interaction.editReply('An error occurred while updating gamemode channels. Please check the logs for more information.');
-        }
-      }
-    },
+  async execute(interaction) {
+    if (interaction.options.getSubcommand() === 'channels') {
+      await updateGamemodeChannels(interaction);
+    }
+  },
 };
 
 async function updateGamemodeChannels(interaction) {
-  await interaction.deferReply({ ephemeral: true });
-
   try {
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: true });
+    }
+
     const guild = interaction.guild;
     const existingData = await getExistingData(guild.id);
 
     if (existingData) {
       await deleteExistingChannels(guild, existingData);
     }
-
+    
     const category = await guild.channels.create({
       name: 'Gamemodes',
       type: ChannelType.GuildCategory,
@@ -63,72 +58,58 @@ async function updateGamemodeChannels(interaction) {
         parent: category.id,
         userLimit: channelInfo.limit
       });
-      createdChannels[channelInfo.name] = channel.id;
+      createdChannels[`channel_${channelInfo.name}`] = channel.id;
     }
 
+    console.log('Created channels:', createdChannels);
+
     await updateDatabase(guild.id, category.id, createdChannels);
-    console.log('Channels created and JSON file updated successfully');
 
     await interaction.editReply('Gamemode channels have been updated successfully.');
+
   } catch (error) {
     console.error('Error updating gamemode channels:', error);
-    await interaction.editReply('An error occurred while updating gamemode channels. Please check the logs for more information.');
+    await interaction.editReply('An error occurred while updating gamemode channels. Please try again later.');
+  }
+}
+
+async function updateDatabase(guildId, categoryId, channelIds) {
+  const updateData = {
+    guild_id: guildId,
+    category_id: categoryId,
+    channel_4v4: channelIds.channel_4v4,
+    channel_3v3: channelIds.channel_3v3,
+    channel_2v2: channelIds.channel_2v2
+  };
+
+  console.log('Updating database with:', updateData);
+
+  try {
+    const existingRecord = await query('others', 'findOne', { guild_id: guildId });
+
+    if (existingRecord) {
+      await query('others', 'updateOne', { guild_id: guildId }, { $set: updateData });
+      console.log('Updated existing record');
+    } else {
+      await query('others', 'insertOne', updateData);
+      console.log('Inserted new record');
+    }
+  } catch (error) {
+    console.error('Error updating database:', error);
     throw error;
   }
 }
 
 async function getExistingData(guildId) {
-  try {
-    const filePath = path.join(config.database.connection.json.directory, 'others.json');
-    const fileContent = await fs.readFile(filePath, 'utf8');
-    const data = JSON.parse(fileContent);
-    return data.find(item => item.guild_id === guildId);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return null; // File doesn't exist yet
-    }
-    throw error;
-  }
+  return query('others', 'findOne', { guild_id: guildId });
 }
+
 async function deleteExistingChannels(guild, data) {
   const channelsToDelete = [data.channel_4v4, data.channel_3v3, data.channel_2v2, data.category_id];
   for (const channelId of channelsToDelete) {
-    const channel = await guild.channels.fetch(channelId).catch(() => null);
-    if (channel) await channel.delete().catch(console.error);
-  }
-}
-
-async function updateDatabase(guildId, categoryId, channelIds) {
-  try {
-    const filePath = path.join(config.database.connection.json.directory, 'others.json');
-    let data = [];
-
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf8');
-      data = JSON.parse(fileContent);
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
+    if (channelId) {
+      const channel = await guild.channels.fetch(channelId).catch(() => null);
+      if (channel) await channel.delete().catch(console.error);
     }
-
-    const existingIndex = data.findIndex(item => item.guild_id === guildId);
-    const updatedItem = {
-      guild_id: guildId,
-      category_id: categoryId,
-      channel_4v4: channelIds['4v4'],
-      channel_3v3: channelIds['3v3'],
-      channel_2v2: channelIds['2v2']
-    };
-
-    if (existingIndex !== -1) {
-      data[existingIndex] = updatedItem;
-    } else {
-      data.push(updatedItem);
-    }
-
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2));
-    console.log('JSON file updated successfully');
-  } catch (error) {
-    console.error('Error updating JSON file:', error);
-    throw error;
   }
 }

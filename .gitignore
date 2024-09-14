@@ -1,9 +1,4 @@
 node_modules/
+logs/
 .env
-
-config.json
-
 package-lock.json
-
-test.py
-test2.py

@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require("discord.js");
 const { query } = require("../../database");
-const axios = require("axios");
 const config = require('../../config.json');
+const axios = require("axios");
 
 function getRankForElo(elo) {
     const thresholds = Object.keys(config.ranks).map(Number).sort((a, b) => b - a);

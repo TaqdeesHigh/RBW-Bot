@@ -16,26 +16,27 @@ class GameLogger {
     }
 
     const embed = new EmbedBuilder()
-      .setColor('#7289DA')
-      .setTitle(`Game #${gameNumber} - ${gamemode.toUpperCase()} Match`)
+      .setColor('#FF4500')
+      .setTitle(`🎮 Game #${gameNumber} - ${gamemode.toUpperCase()} Match`)
+      .setDescription(`A new ${gamemode} match has started!`)
       .setTimestamp()
       .setFooter({ text: `Match logged by ${this.client.user.username}`, iconURL: this.client.user.displayAvatarURL() });
 
     embed.addFields(
-      { name: 'Start Time', value: startTime.toLocaleString(), inline: true },
-      { name: 'Selection Method', value: selectionMethod, inline: true },
-      { name: 'Players', value: `${teams.reduce((acc, team) => acc + team.length, 0)} (${gamemode})`, inline: true }
+      { name: '🕒 Start Time', value: `\`${startTime.toLocaleString()}\``, inline: true },
+      { name: '🔀 Selection Method', value: `\`${selectionMethod}\``, inline: true },
+      { name: '👥 Players', value: `\`${teams.reduce((acc, team) => acc + team.length, 0)} (${gamemode})\``, inline: true }
     );
 
     teams.forEach((team, index) => {
-      const teamMembers = team.map(member => member.user.username).join('\n');
-      embed.addFields({ name: `Team ${index + 1}`, value: teamMembers, inline: true });
+      const teamMembers = team.map(member => `• ${member.user.username}`).join('\n');
+      embed.addFields({ name: `🏆 Team ${index + 1}`, value: teamMembers, inline: true });
     });
 
-    if (spectators && spectators.length > 0) {
-      const spectatorList = spectators.map(s => s.username).join(', ');
-      embed.addFields({ name: 'Spectators', value: spectatorList, inline: false });
-    }
+    /*if (spectators && spectators.length > 0) {
+      const spectatorList = spectators.map(s => `• ${s.username}`).join('\n');
+      embed.addFields({ name: '👀 Spectators', value: spectatorList, inline: false });
+    } should i add this?*/
 
     await logChannel.send({ embeds: [embed] });
   }

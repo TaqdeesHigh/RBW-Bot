@@ -37,37 +37,4 @@ client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isCommand()) return;
-
-  const command = client.commands.get(interaction.commandName);
-  if (!command) return;
-
-  try {
-    await command.execute(interaction);
-  } catch (error) {
-    await errorHandler.handleCommandError(interaction, error);
-  }
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  errorHandler.logError(reason instanceof Error ? reason : new Error(String(reason)), { context: 'Unhandled Rejection' });
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  errorHandler.logError(error, { context: 'Uncaught Exception' });
-  // Gracefully shut down the bot
-  client.destroy();
-  process.exit(1);
-});
-
-process.on('SIGINT', async () => {
-  console.log('Bot is shutting down...');
-  await errorHandler.logError(new Error('Bot shutdown initiated'), { context: 'Graceful Shutdown' });
-  client.destroy();
-  process.exit(0);
-});
-
 initializeBot();

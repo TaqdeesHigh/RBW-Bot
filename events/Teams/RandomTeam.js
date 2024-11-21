@@ -7,6 +7,7 @@ module.exports = {
     const gameLogger = new GameLogger(client);
     const gameNumber = textChannel.name.split('-')[1];
     const guild = textChannel.guild;
+    const EMBED_COLOR = '#2F3136';
 
     if (!voiceChannel || !voiceChannel.members) {
       await textChannel.send("Error: Voice channel not found or has no members.");
@@ -34,8 +35,8 @@ module.exports = {
     }
 
     const embed = new EmbedBuilder()
-      .setColor('#00FF00')
-      .setTitle('🏆 Random Team Selection Results')
+      .setColor(EMBED_COLOR)
+      .setTitle('Random Team Selection Results')
       .setTimestamp();
 
     teams.forEach((team, index) => {

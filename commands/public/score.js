@@ -4,6 +4,14 @@ const { eloCalc } = require('../../eloCalc');
 const { updateEloAndNickname } = require('../../events/Elo/updateNickName');
 const config = require('../../config.json');
 
+// Utility function to calculate Win-Loss Ratio
+const calculateWLR = (wins, losses) => {
+    if (losses === 0) {
+        return wins > 0 ? 99.99 : 0; // Handle special cases
+    }
+    return Number((wins / losses).toFixed(2));
+};
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('score')
@@ -90,7 +98,7 @@ module.exports = {
                 { $set: { status: status } }
             );
 
-            // Only process ELO if game is validated
+            // Only process ELO and stats if game is validated
             if (status === 'validated') {
                 // Calculate ELO changes
                 const eloResults = await eloCalc(winningTeamPlayers, losingTeamPlayers, game.mvp);
@@ -109,9 +117,70 @@ module.exports = {
                     await updateEloAndNickname(loser.discord_id, interaction.guild, loser.newElo - loser.oldElo);
                 }
 
-                // Send detailed ELO changes to game logs
-                const gameLogsChannel = interaction.client.channels.cache.get(config.GAME_LOGS);
-                if (gameLogsChannel) {
+                // Statistical tracking for all players
+                const allPlayers = [...winningTeamPlayers, ...losingTeamPlayers];
+
+                // Modify the statistical tracking section like this:
+                for (const player of allPlayers) {
+                    // Retrieve current user stats
+                    const userStats = await query('stats', 'findOne', { discord_id: player });
+                    
+                    // Determine if player was in winning or losing team
+                    const isWinner = winningTeamPlayers.includes(player);
+                    
+                    // Calculate new stats
+                    const currentWins = userStats?.wins || 0;
+                    const currentLosses = userStats?.lost || 0;
+                    const currentGames = userStats?.games || 0;
+                    
+                    // Calculate new values
+                    const newWins = isWinner ? currentWins + 1 : currentWins;
+                    const newLosses = isWinner ? currentLosses : currentLosses + 1;
+                    const newGames = currentGames + 1;
+                    const newWLR = calculateWLR(newWins, newLosses);
+                    
+                    // Prepare update object with explicit values
+                    const updateData = {
+                        wins: newWins,
+                        lost: newLosses,
+                        wlr: newWLR,
+                        games: newGames
+                    };
+                    
+                    // Atomic database update
+                    await query('stats', 'updateOne', 
+                        { discord_id: player },
+                        { 
+                            $set: {
+                                wins: updateData.wins,
+                                lost: updateData.lost,
+                                wlr: updateData.wlr,
+                                games: updateData.games
+                            }
+                        }
+                    );
+
+                    // Track special achievements
+                    if (player === game.mvp) {
+                        const currentMvp = userStats?.mvp || 0;
+                        await query('stats', 'updateOne', 
+                            { discord_id: player },
+                            { $set: { mvp: currentMvp + 1 } }
+                        );
+                    }
+                    
+                    if (player === game.bed_breaker) {
+                        const currentBedBreaker = userStats?.bed_breaker || 0;
+                        await query('stats', 'updateOne', 
+                            { discord_id: player },
+                            { $set: { bed_breaker: currentBedBreaker + 1 } }
+                        );
+                    }
+                }
+
+                // Send detailed ELO changes to score logs channel
+                const scoreLogsChannel = interaction.client.channels.cache.get(config.scoreChannelID);
+                if (scoreLogsChannel) {
                     const embed = new EmbedBuilder()
                         .setColor('#00FF00')
                         .setTitle(`Game #${gameNumber} Validated`)
@@ -123,7 +192,7 @@ module.exports = {
                         )
                         .setTimestamp();
 
-                    await gameLogsChannel.send({ embeds: [embed] });
+                    await scoreLogsChannel.send({ embeds: [embed] });
                 }
             }
 

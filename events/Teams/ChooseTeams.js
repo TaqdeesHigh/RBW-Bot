@@ -7,6 +7,7 @@ module.exports = {
     const gameLogger = new GameLogger(client);
     const gameNumber = textChannel.name.split('-')[1];
     const guild = textChannel.guild;
+    const EMBED_COLOR = '#2F3136';
 
     if (!voiceChannel || !voiceChannel.members) {
       await textChannel.send("Error: Voice channel not found or has no members.");
@@ -28,8 +29,8 @@ module.exports = {
     teams[1].push(captains[1]);
 
     const captainEmbed = new EmbedBuilder()
-      .setColor('#FFA500')
-      .setTitle('👑 Team Captains Selected')
+      .setColor(EMBED_COLOR)
+      .setTitle('Team Captains Selected')
       .addFields(
         { name: 'Team 1 Captain', value: captains[0].user.username, inline: true },
         { name: 'Team 2 Captain', value: captains[1].user.username, inline: true }
@@ -45,7 +46,7 @@ module.exports = {
         if (remainingMembers.length === 0) break;
 
         const selectionEmbed = new EmbedBuilder()
-          .setColor('#1E90FF')
+          .setColor(EMBED_COLOR)
           .setTitle(`Team ${j + 1} Selection`)
           .setDescription(`${captains[j].user}, choose a player for your team by mentioning them.`)
           .addFields({
@@ -69,7 +70,7 @@ module.exports = {
           remainingMembers.splice(remainingMembers.indexOf(randomMember), 1);
 
           const timeoutEmbed = new EmbedBuilder()
-            .setColor('#FF0000')
+            .setColor(EMBED_COLOR)
             .setTitle('Selection Timeout')
             .setDescription(`No selection made. Randomly added ${randomMember.user.username} to Team ${j + 1}.`)
             .setTimestamp();
@@ -90,8 +91,8 @@ module.exports = {
     }
 
     const finalEmbed = new EmbedBuilder()
-      .setColor('#00FF00')
-      .setTitle('🏆 Final Team Assignments')
+      .setColor(EMBED_COLOR)
+      .setTitle('Final Team Assignments')
       .setTimestamp();
 
     teams.forEach((team, index) => {

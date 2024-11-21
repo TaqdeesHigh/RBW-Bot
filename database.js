@@ -6,13 +6,13 @@ const pool = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
+  port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
   connectTimeout: 60000,
   enableKeepAlive: true,
-  keepAliveInitialDelay: 10000 // milliseconds
+  keepAliveInitialDelay: 10000
 });
 
 async function initDatabase() {
@@ -92,7 +92,6 @@ async function healthCheck() {
     console.log('Health check passed');
   } catch (error) {
     console.error('Health check failed:', error);
-    // Implement alerting mechanism here
   }
 }
 
@@ -117,8 +116,11 @@ async function query(table, operation, ...args) {
             return { insertId: insertResult.insertId };
           case 'deleteOne':
           case 'deleteMany':
-            await connection.query(`DELETE FROM ${table} WHERE ?`, args[0]);
-            return { deletedCount: 1 };
+            const [deleteResult] = await connection.query(`DELETE FROM ${table} WHERE ?`, args[0]);
+            return { deletedCount: deleteResult.affectedRows };
+          case 'select':
+            const [selectRows] = await connection.query(args[0]);
+            return selectRows;
           default:
             throw new Error(`Unsupported operation: ${operation}`);
         }
@@ -138,10 +140,13 @@ async function query(table, operation, ...args) {
   throw new Error('Max retries reached. Unable to connect to database.');
 }
 
-setInterval(healthCheck, 30000); // Run health check every 30 seconds
+// Health check interval
+setInterval(healthCheck, 30000);
 
+// Initialize database on startup
 initDatabase();
 
+// Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('Shutting down gracefully...');
   try {

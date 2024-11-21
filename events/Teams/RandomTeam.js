@@ -1,5 +1,6 @@
 const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 const GameLogger = require('../Logs/gameLogger');
+const { query } = require('../../database');
 
 module.exports = {
   async execute(textChannel, voiceChannel, gamemode, client) {
@@ -86,7 +87,14 @@ module.exports = {
     // Delete the original voice channel
     await voiceChannel.delete();
 
-    // Send the team information to the text channel
-    await textChannel.send("Team channels have been created and members have been moved. Both teams can see and join each other's channels. Good luck and have fun!");
+    // Update game status in database
+    await query('games', 'updateOne', 
+      { game_number: gameNumber }, 
+      { $set: { 
+        status: 'in_progress', 
+        team1_members: JSON.stringify(teams[0].map(m => m.id)),
+        team2_members: JSON.stringify(teams[1].map(m => m.id))
+      }}
+    );
   }
 };

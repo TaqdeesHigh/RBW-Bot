@@ -39,7 +39,8 @@ async function initDatabase() {
         wlr FLOAT DEFAULT 0,
         rank VARCHAR(255),
         games INT DEFAULT 0,
-        mvp INT DEFAULT 0
+        mvp INT DEFAULT 0,
+        bed_breaker INT DEFAULT 0
       )
     `);
 
@@ -52,6 +53,26 @@ async function initDatabase() {
         channel_4v4 VARCHAR(255),
         channel_3v3 VARCHAR(255),
         channel_2v2 VARCHAR(255)
+      )
+    `);
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS games (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        game_number VARCHAR(255) NOT NULL UNIQUE,
+        gamemode VARCHAR(10) NOT NULL,
+        status ENUM('queued', 'in_progress', 'submitted', 'validated', 'voided') DEFAULT 'queued',
+        team1_members JSON,
+        team2_members JSON,
+        winning_team VARCHAR(10),
+        mvp VARCHAR(255),
+        proof_image VARCHAR(255),
+        bed_breaker TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        category_id VARCHAR(255),
+        voice_channel_id VARCHAR(255),
+        text_channel_id VARCHAR(255)
       )
     `);
 

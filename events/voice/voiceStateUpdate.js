@@ -1,8 +1,7 @@
 const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { query } = require('../../database');
 const { sendUnregisteredWarning } = require('../Warnings/warning');
-
-let gameCounter = 0;
+const crypto = require('crypto');
 
 module.exports = {
   name: 'voiceStateUpdate',
@@ -13,6 +12,7 @@ module.exports = {
 
       const channelData = await getChannelData(guildId);
       if (!channelData) return;
+      
       const gamemodeChannels = {
         '4v4': channelData.channel_4v4,
         '3v3': channelData.channel_3v3,
@@ -21,13 +21,14 @@ module.exports = {
 
       const gamemode = Object.keys(gamemodeChannels).find(mode => gamemodeChannels[mode] === channel.id);
       if (!gamemode) return;
+      
       const requiredPlayers = parseInt(gamemode.charAt(0)) * 2;
       if (channel.members.size === requiredPlayers) {
         const unregisteredUsers = await checkRegisteredUsers(channel.members);
         if (unregisteredUsers.length > 0) {
           await sendUnregisteredWarning(channel, unregisteredUsers, gamemode);
         } else {
-          await createGameChannels(newState.guild, channel.members, gamemode);
+          await createQueuedGame(newState.guild, channel.members, gamemode, client);
         }
       }
     }
@@ -49,14 +50,25 @@ async function checkRegisteredUsers(members) {
   return unregisteredUsers;
 }
 
-async function createGameChannels(guild, members, gamemode) {
-  gameCounter++;
-  const gameNumber = gameCounter;
-  const categoryName = `Game-${gamemode}-${gameNumber}`;
+async function createQueuedGame(guild, members, gamemode, client) {
+  // Generate a unique game number
+  const gameNumber = generateGameNumber();
 
   try {
+    // Save game to database
+    const gameRecord = {
+      game_number: gameNumber,
+      gamemode: gamemode,
+      status: 'queued',
+      team1_members: JSON.stringify(Array.from(members.keys()).slice(0, members.size / 2)),
+      team2_members: JSON.stringify(Array.from(members.keys()).slice(members.size / 2)),
+    };
+
+    const savedGame = await query('games', 'insertOne', gameRecord);
+
+    // Create category and channels
     const category = await guild.channels.create({
-      name: categoryName,
+      name: `Game-${gamemode}-${gameNumber}`,
       type: ChannelType.GuildCategory,
       permissionOverwrites: [
         {
@@ -70,7 +82,7 @@ async function createGameChannels(guild, members, gamemode) {
       ],
     });
 
-    await guild.channels.create({
+    const voiceChannel = await guild.channels.create({
       name: `game-${gameNumber}`,
       type: ChannelType.GuildVoice,
       parent: category.id,
@@ -82,11 +94,22 @@ async function createGameChannels(guild, members, gamemode) {
       parent: category.id,
     });
 
-    const newVoiceChannel = category.children.cache.find(ch => ch.type === ChannelType.GuildVoice);
+    // Update game record with channel IDs
+    await query('games', 'updateOne', 
+      { id: savedGame.insertId }, 
+      { $set: { 
+        category_id: category.id, 
+        voice_channel_id: voiceChannel.id, 
+        text_channel_id: textChannel.id 
+      }}
+    );
+
+    // Move members to voice channel
     for (const [, member] of members) {
-      await member.voice.setChannel(newVoiceChannel);
+      await member.voice.setChannel(voiceChannel);
     }
 
+    // Send team selection embed
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle('Team Selection')
@@ -95,35 +118,26 @@ async function createGameChannels(guild, members, gamemode) {
     const row = new ActionRowBuilder()
       .addComponents(
         new ButtonBuilder()
-          .setCustomId('random:0:0')
-          .setLabel('Random (0)')
+          .setCustomId(`random:${gameNumber}`)
+          .setLabel('Random')
           .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
-          .setCustomId('choose:0:0')
-          .setLabel('Choose (0)')
+          .setCustomId(`choose:${gameNumber}`)
+          .setLabel('Choose')
           .setStyle(ButtonStyle.Primary)
-        );
+      );
     
-      await textChannel.send({ embeds: [embed], components: [row] });
-    
-      console.log(`Created game channels for ${gamemode} with number: ${gameNumber}`);
-    } catch (error) {
-      console.error('Error creating game channels:', error);
-    }
-  }
+    await textChannel.send({ embeds: [embed], components: [row] });
 
-async function handleButtonInteraction(interaction) {
-  if (!interaction.isButton()) return;
-
-  const [action, gamemode] = interaction.customId.split(':');
-
-  if (action === 'start_game') {
-    await interaction.update({ content: 'Starting the game...', components: [] });
-    await createGameChannels(interaction.guild, interaction.message.mentions.members, gamemode);
-  } else if (action === 'cancel_game') {
-    await interaction.update({ content: 'Game cancelled.', components: [] });
+    console.log(`Created queued game for ${gamemode} with number: ${gameNumber}`);
+  } catch (error) {
+    console.error('Error creating queued game:', error);
   }
 }
 
-// Export the handleButtonInteraction function
-module.exports.handleButtonInteraction = handleButtonInteraction;
+function generateGameNumber() {
+  // Generate a unique 6-character game number
+  return crypto.randomBytes(3).toString('hex');
+}
+
+module.exports.createQueuedGame = createQueuedGame;

@@ -1,5 +1,6 @@
 const { MessageCollector, EmbedBuilder, PermissionsBitField } = require('discord.js');
 const GameLogger = require('../Logs/gameLogger');
+const { query } = require('../../database');
 
 module.exports = {
   async execute(textChannel, voiceChannel, gamemode, client) {

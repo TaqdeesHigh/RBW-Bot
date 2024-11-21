@@ -1,6 +1,8 @@
 const { ClusterClient, getInfo } = require("discord-hybrid-sharding");
 const { Client, GatewayIntentBits, Partials, Collection } = require("discord.js");
 const errorHandler = require('./handlers/errorHandler');
+const { checkAndRemoveBans } = require('./events/jobs/unbanJob');
+
 require("dotenv").config();
 
 const { Guilds, GuildMembers, GuildMessages, MessageContent, GuildVoiceStates } = GatewayIntentBits;
@@ -18,6 +20,10 @@ const client = new Client({
 
 client.commands = new Collection();
 client.cluster = new ClusterClient(client);
+
+setInterval(() => {
+  checkAndRemoveBans(client);
+}, 60000);
 
 async function initializeBot() {
   try {

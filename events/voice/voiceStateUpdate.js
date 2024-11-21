@@ -24,10 +24,32 @@ module.exports = {
       
       const requiredPlayers = parseInt(gamemode.charAt(0)) * 2;
       if (channel.members.size === requiredPlayers) {
-        const unregisteredUsers = await checkRegisteredUsers(channel.members);
-        if (unregisteredUsers.length > 0) {
-          await sendUnregisteredWarning(channel, unregisteredUsers, gamemode);
-        } else {
+        const issues = await checkRegisteredUsers(channel.members);
+
+        const unregistered = issues.filter(issue => issue.type === 'unregistered').map(issue => issue.member);
+        const banned = issues.filter(issue => issue.type === 'banned').map(issue => issue.member);
+
+        if (unregistered.length > 0) {
+          await sendUnregisteredWarning(channel, unregistered, gamemode);
+        }
+
+        if (banned.length > 0) {
+          const bannedMessages = banned.map(ban => `${ban.displayName} is banned from participating. Reason: ${ban.reason || 'No reason provided.'}`);
+          
+          const embed = new EmbedBuilder()
+            .setColor('#FF0000') // Red color for banned users
+            .setTitle('Banned Users')
+            .setDescription('The following players are currently banned from participating in the game:')
+            .addFields(
+              { name: 'Banned Players', value: bannedMessages.join('\n') }
+            )
+            .setTimestamp()
+            .setFooter({ text: `Game Mode: ${gamemode}`, iconURL: newState.guild.iconURL() });
+
+          await channel.send({ embeds: [embed] });
+        }
+
+        if (unregistered.length === 0 && banned.length === 0) {
           await createQueuedGame(newState.guild, channel.members, gamemode, client);
         }
       }
@@ -40,14 +62,37 @@ async function getChannelData(guildId) {
 }
 
 async function checkRegisteredUsers(members) {
-  const unregisteredUsers = [];
+  const issues = []; // Store issues as objects with type and member
+
   for (const [id, member] of members) {
+    // Check if the user is registered
     const isRegistered = await query('registered', 'findOne', { discord_id: id });
     if (!isRegistered) {
-      unregisteredUsers.push(member);
+      issues.push({ type: 'unregistered', member });
+      continue;
+    }
+
+    // Format the current timestamp as "YYYY-MM-DD HH:MM:SS"
+    const now = new Date();
+    const formattedNow = now.toISOString().slice(0, 19).replace('T', ' ');
+
+    // Query the database for an active ban
+    const sql = `
+      SELECT * 
+      FROM punishments 
+      WHERE discord_id = ? 
+        AND type = 'ban' 
+        AND expiration > ?
+      LIMIT 1
+    `;
+    const activeBan = await query(null, 'raw', sql, [id, formattedNow]);
+
+    if (activeBan.length > 0) {
+      issues.push({ type: 'banned', member, reason: activeBan[0].reason });
     }
   }
-  return unregisteredUsers;
+
+  return issues;
 }
 
 async function createQueuedGame(guild, members, gamemode, client) {

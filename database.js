@@ -76,6 +76,21 @@ async function initDatabase() {
       )
     `);
 
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS punishments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        discord_id VARCHAR(255) NOT NULL,
+        type ENUM('strike', 'ban') NOT NULL,
+        amount INT DEFAULT 0,
+        expiration TIMESTAMP NULL,
+        reason TEXT,
+        issued_by VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+
     console.log('Database initialized');
   } catch (error) {
     console.error('Error initializing database:', error);
@@ -111,6 +126,9 @@ async function query(table, operation, ...args) {
           case 'updateOne':
             const [updateResult] = await connection.query(`UPDATE ${table} SET ? WHERE ?`, [args[1].$set, args[0]]);
             return { modifiedCount: updateResult.affectedRows };
+          case 'raw':
+            const [rawRows] = await connection.query(...args);
+            return rawRows;
           case 'insertOne':
             const [insertResult] = await connection.query(`INSERT INTO ${table} SET ?`, args[0]);
             return { insertId: insertResult.insertId };

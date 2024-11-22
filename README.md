@@ -64,7 +64,7 @@ DB_PORT=your_database_port
     "scoreChannelID": "yourChannelID",
     "alertID": "yourChannelID",
     "devs": ["378606584802050049", "1185618985518116925"]
-}
+}```
 
 **Important**: Do not remove or modify the "devs" field as it credits the original developers.
 
@@ -131,7 +131,6 @@ Loaded events
 Loaded Commands
 Bot is ready!
 
-```
 ### Contributing
 Contributions are welcome! Please feel free to submit pull requests or report issues.
 
@@ -143,5 +142,3 @@ Originally developed by:
 - Discord ID: 1185618985518116925
 
 Enojoy!
-
-```

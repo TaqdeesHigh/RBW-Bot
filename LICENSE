@@ -1,0 +1,69 @@
+## License
+
+This Discord bot and its source code are protected under copyright law. By using this software, you agree to the terms outlined in this license.
+
+---
+
+### Usage Rights
+You are granted permission to:
+- **Use** the bot and its source code for personal, educational, or commercial purposes without restrictions.
+- **Modify** the source code to suit your specific needs.
+- **Distribute** modified versions of the source code.
+
+---
+
+### Restrictions
+You are prohibited from:
+- **Removing or Altering Original Developer Credits:**
+  - The "devs" field in the `config.json` file must remain intact with the original developer IDs:
+    - 378606584802050049
+    - 1185618985518116925
+  - You must maintain all attributions to the original developers in documentation, user interfaces, and significant parts of the code.
+- **Omitting this License:**
+  - Any distribution of the original or modified versions of the software must include this license in its entirety.
+- **Misrepresenting Ownership:**
+  - You may not claim ownership of the original code, even if you have made modifications.
+
+---
+
+### No Warranty
+- This software is provided "as is," without any express or implied warranties, including but not limited to implied warranties of merchantability or fitness for a particular purpose.
+- The original developers shall not be held liable for any damages or issues arising from the use or misuse of this software.
+
+---
+
+### Modifications
+You are allowed to:
+- Modify the code as needed for your purposes.
+- Distribute modified versions under the following conditions:
+  - All original developer credits and attributions must be preserved.
+  - The modifications must be clearly documented to distinguish them from the original work.
+  - This license must be included with the modified version.
+
+---
+
+### Commercial Use
+You are permitted to use this bot and its source code for commercial purposes under the following conditions:
+- Attribution to the original developers must be clearly visible in any user-facing documentation or interface.
+
+---
+
+### Termination
+Your rights under this license will terminate automatically if:
+- You fail to comply with any of the terms outlined herein.
+- You remove or alter the original developer credits.
+
+Upon termination, you must cease all use, distribution, and modification of the software.
+
+---
+
+### Support
+The original developers are not obligated to provide support, updates, or maintenance for this bot.  
+Use of this software is at your own risk.
+
+---
+
+### Copyright Notice
+Copyright © 2024 All rights reserved.  
+
+### Note: For permissions beyond the scope of this license, contact the Me at taqdees678@gmail.com!

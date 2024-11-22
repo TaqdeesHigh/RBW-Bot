@@ -46,7 +46,8 @@ A comprehensive Discord bot for managing ranked bedwars matches with auto-queuin
 ### Configuration Setup
 
 1. Rename `dev.env` to `.env` and fill in the following:
-```env
+```
+env
 TOKEN="your_discord_bot_token"
 DB_HOST=your_database_host
 DB_USER=your_database_user
@@ -56,7 +57,8 @@ DB_PORT=your_database_port
 ```
 
 2. Edit `config.json` with your server details:
-```{
+```
+{
     "guildId": "yourGuildID",
     "logsChannel": "yourChannelID", 
     "GAME_LOGS": "yourChannelID",
@@ -65,7 +67,8 @@ DB_PORT=your_database_port
     "scoreChannelID": "yourChannelID",
     "alertID": "yourChannelID",
    "devs": ["378606584802050049", "1185618985518116925"]
-}```
+}
+```
 
 **Important**: Do not remove or modify the "devs" field as it credits the original developers.
 

@@ -55,7 +55,7 @@ module.exports = {
     }
 
     try {
-      // Parse duration
+      // In your ban command's execute function:
       const duration = ms(durationInput);
       if (!duration) {
         return interaction.reply({ 
@@ -66,14 +66,19 @@ module.exports = {
 
       const expirationTime = new Date(Date.now() + duration);
 
+      console.log('Creating ban with expiration:', expirationTime.toISOString());
+
       // Insert ban record
-      await query('punishments', 'insertOne', {
-        discord_id: user.id,
-        type: 'ban',
-        expiration: expirationTime,
-        reason: reason,
-        issued_by: interaction.user.id
-      });
+      await query('punishments', 'raw', `
+        INSERT INTO punishments 
+        (discord_id, type, expiration, reason, issued_by) 
+        VALUES (?, 'ban', ?, ?, ?)
+      `, [
+        user.id,
+        expirationTime,
+        reason,
+        interaction.user.id
+      ]);
 
       // Create embed
       const banEmbed = new EmbedBuilder()

@@ -23,7 +23,7 @@ client.cluster = new ClusterClient(client);
 
 setInterval(() => {
   checkAndRemoveBans(client);
-}, 60000);
+}, 15000);
 
 async function initializeBot() {
   try {

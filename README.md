@@ -86,8 +86,6 @@ Or install individual packages:
 
 2. Successful initialization will display:
 
-```
-
 Launched Cluster 0
 Database initialized
 Logged in as {Bot-Name}

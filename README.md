@@ -64,7 +64,7 @@ DB_PORT=your_database_port
     "scoreChannelID": "yourChannelID",
     "alertID": "yourChannelID",
     "devs": ["378606584802050049", "1185618985518116925"]
-}```
+}
 
 **Important**: Do not remove or modify the "devs" field as it credits the original developers.
 

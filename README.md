@@ -90,50 +90,52 @@ Or install individual packages:
 
 2. Successful initialization will display:
 
-`Launched Cluster 0`
-`Database initialized`
-`Logged in as {Bot-Name}`
-`.-------------------------------.`
-`|        Events        | Status |`
-`|----------------------|--------|`
-`| buttonInteraction.js | ✅      |`
-`| ready.js             | ✅      |`
-`| updateNickName.js    | ✅      |`
-`| guildCreate.js       | ✅      |`
-`| interactionCreate.js | ✅      |`
-`| unbanJob.js          | ✅      |`
-`| gameLogger.js        | ✅      |`
-`| ChooseTeams.js       | ✅      |`
-`| RandomTeam.js        | ✅      |`
-`| voiceStateUpdate.js  | ✅      |`
-`| banned.js            | ✅      |`
-`| warning.js           | ✅      |`
-`'-------------------------------'`
-`Loaded events`
-`.------------------------------------.`
-`|         Commands          | Status |`
-`|---------------------------|--------|`
-`| ban.js                    | ✅      |`
-`| Elo.js                    | ✅      |`
-`| fix.js                    | ✅      |`
-`| forceRegister.js          | ✅      |`
-`| forceUnregister.js        | ✅      |`
-`| fv.js                     | ✅      |`
-`| score.js                  | ✅      |`
-`| strike.js                 | ✅      |`
-`| unban.js                  | ✅      |`
-`| updateGamemodeChannels.js | ✅      |`
-`| leaderboard.js            | ✅      |`
-`| register.js               | ✅      |`
-`| ss.js                     | ✅      |`
-`| stats.js                  | ✅      |`
-`| submit.js                 | ✅      |`
-`| test.js                   | ✅      |`
-`| unregister.js             | ✅      |`
-`| void.js                   | ✅      |`
-`'------------------------------------'`
-`Loaded Commands`
-`Bot is ready!`
+```
+Launched Cluster 0
+Database initialized
+Logged in as {Bot-Name}
+.-------------------------------.
+|        Events        | Status |
+|----------------------|--------|
+| buttonInteraction.js | ✅      |
+| ready.js             | ✅      |
+| updateNickName.js    | ✅      |
+| guildCreate.js       | ✅      |
+| interactionCreate.js | ✅      |
+| unbanJob.js          | ✅      |
+| gameLogger.js        | ✅      |
+| ChooseTeams.js       | ✅      |
+| RandomTeam.js        | ✅      |
+| voiceStateUpdate.js  | ✅      |
+| banned.js            | ✅      |
+| warning.js           | ✅      |
+'-------------------------------'
+Loaded events
+.------------------------------------.
+|         Commands          | Status |
+|---------------------------|--------|
+| ban.js                    | ✅      |
+| Elo.js                    | ✅      |
+| fix.js                    | ✅      |
+| forceRegister.js          | ✅      |
+| forceUnregister.js        | ✅      |
+| fv.js                     | ✅      |
+| score.js                  | ✅      |
+| strike.js                 | ✅      |
+| unban.js                  | ✅      |
+| updateGamemodeChannels.js | ✅      |
+| leaderboard.js            | ✅      |
+| register.js               | ✅      |
+| ss.js                     | ✅      |
+| stats.js                  | ✅      |
+| submit.js                 | ✅      |
+| test.js                   | ✅      |
+| unregister.js             | ✅      |
+| void.js                   | ✅      |
+'------------------------------------'
+Loaded Commands
+Bot is ready!
+```
 
 ### Contributing
 Contributions are welcome! Please feel free to submit pull requests or report issues.
@@ -145,4 +147,4 @@ Originally developed by:
 - Discord ID: 378606584802050049
 - Discord ID: 1185618985518116925
 
-Enojoy!
+### Enojoy!

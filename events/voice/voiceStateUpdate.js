@@ -154,7 +154,7 @@ async function createQueuedGame(guild, members, gamemode, client) {
       await member.voice.setChannel(voiceChannel);
     }
 
-    // Send team selection embed
+    // Send team selection embed with modified buttons
     const embed = new EmbedBuilder()
       .setColor('#0099ff')
       .setTitle('Team Selection')
@@ -163,12 +163,12 @@ async function createQueuedGame(guild, members, gamemode, client) {
     const row = new ActionRowBuilder()
       .addComponents(
         new ButtonBuilder()
-          .setCustomId(`random:${gameNumber}`)
-          .setLabel('Random')
+          .setCustomId(`random:0:0:${gameNumber}`)  // Modified format: action:randomVotes:chooseVotes:gameNumber
+          .setLabel('Random (0)')
           .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
-          .setCustomId(`choose:${gameNumber}`)
-          .setLabel('Choose')
+          .setCustomId(`choose:0:0:${gameNumber}`)  // Modified format: action:randomVotes:chooseVotes:gameNumber
+          .setLabel('Choose (0)')
           .setStyle(ButtonStyle.Primary)
       );
     
@@ -179,7 +179,6 @@ async function createQueuedGame(guild, members, gamemode, client) {
     console.error('Error creating queued game:', error);
   }
 }
-
 function generateGameNumber() {
   // Generate a unique 6-character game number
   return crypto.randomBytes(3).toString('hex');

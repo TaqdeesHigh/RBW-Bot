@@ -41,23 +41,43 @@ module.exports = {
 
     const remainingMembers = members.filter(member => !captains.includes(member));
 
-    for (let i = 0; i < teamSize - 1; i++) {
-      for (let j = 0; j < 2; j++) {
-        if (remainingMembers.length === 0) break;
+    // Define selection patterns based on gamemode
+    const selectionPattern = teamSize === 3 ? [1, 2, 1] : [1, 2, 2, 1];
+    let currentTeam = 0; // 0 for team 1, 1 for team 2
+    let patternIndex = 0;
 
-        const selectionEmbed = new EmbedBuilder()
-          .setColor(EMBED_COLOR)
-          .setTitle(`Team ${j + 1} Selection`)
-          .setDescription(`${captains[j].user}, choose a player for your team by mentioning them.`)
-          .addFields({
-            name: 'Available Players',
-            value: remainingMembers.map(member => member.user.username).join('\n')
-          })
-          .setTimestamp();
+    while (remainingMembers.length > 0) {
+      const selectionsNeeded = Math.min(selectionPattern[patternIndex], remainingMembers.length);
+      
+      // If this is the last remaining member(s), automatically assign them
+      if (remainingMembers.length <= selectionsNeeded) {
+        for (const member of remainingMembers) {
+          teams[currentTeam].push(member);
+          const autoAssignEmbed = new EmbedBuilder()
+            .setColor(EMBED_COLOR)
+            .setTitle('Automatic Assignment')
+            .setDescription(`${member.user.username} has been automatically assigned to Team ${currentTeam + 1}`)
+            .setTimestamp();
+          await textChannel.send({ embeds: [autoAssignEmbed] });
+        }
+        break;
+      }
 
-        await textChannel.send({ embeds: [selectionEmbed] });
+      const selectionEmbed = new EmbedBuilder()
+        .setColor(EMBED_COLOR)
+        .setTitle(`Team ${currentTeam + 1} Selection`)
+        .setDescription(`${captains[currentTeam].user}, select ${selectionsNeeded} player${selectionsNeeded > 1 ? 's' : ''} by mentioning them.`)
+        .addFields({
+          name: 'Available Players',
+          value: remainingMembers.map(member => member.user.username).join('\n')
+        })
+        .setTimestamp();
 
-        const filter = m => m.author.id === captains[j].id && m.mentions.members.size > 0;
+      await textChannel.send({ embeds: [selectionEmbed] });
+
+      let selectedCount = 0;
+      while (selectedCount < selectionsNeeded) {
+        const filter = m => m.author.id === captains[currentTeam].id && m.mentions.members.size > 0;
         const collector = new MessageCollector(textChannel, { filter, max: 1, time: 30000 });
 
         const collected = await new Promise(resolve => {
@@ -65,29 +85,40 @@ module.exports = {
         });
 
         if (collected.size === 0) {
-          const randomMember = remainingMembers[Math.floor(Math.random() * remainingMembers.length)];
-          teams[j].push(randomMember);
-          remainingMembers.splice(remainingMembers.indexOf(randomMember), 1);
+          // Timeout - randomly select remaining required players
+          const remainingSelection = selectionsNeeded - selectedCount;
+          for (let i = 0; i < remainingSelection; i++) {
+            const randomIndex = Math.floor(Math.random() * remainingMembers.length);
+            const randomMember = remainingMembers[randomIndex];
+            teams[currentTeam].push(randomMember);
+            remainingMembers.splice(randomIndex, 1);
+            selectedCount++;
 
-          const timeoutEmbed = new EmbedBuilder()
-            .setColor(EMBED_COLOR)
-            .setTitle('Selection Timeout')
-            .setDescription(`No selection made. Randomly added ${randomMember.user.username} to Team ${j + 1}.`)
-            .setTimestamp();
+            const timeoutEmbed = new EmbedBuilder()
+              .setColor(EMBED_COLOR)
+              .setTitle('Selection Timeout')
+              .setDescription(`No selection made. Randomly added ${randomMember.user.username} to Team ${currentTeam + 1}.`)
+              .setTimestamp();
 
-          await textChannel.send({ embeds: [timeoutEmbed] });
+            await textChannel.send({ embeds: [timeoutEmbed] });
+          }
         } else {
-          const selectedMember = collected.first().mentions.members.first();
+          const message = collected.first();
+          const selectedMember = message.mentions.members.first();
+
           if (remainingMembers.includes(selectedMember)) {
-            teams[j].push(selectedMember);
+            teams[currentTeam].push(selectedMember);
             remainingMembers.splice(remainingMembers.indexOf(selectedMember), 1);
-            await textChannel.send(`Added ${selectedMember.user.username} to Team ${j + 1}.`);
+            selectedCount++;
+            await textChannel.send(`Added ${selectedMember.user.username} to Team ${currentTeam + 1}.`);
           } else {
             await textChannel.send(`Invalid selection. Please choose from the remaining players.`);
-            j--; // Retry this captain's turn
           }
         }
       }
+
+      currentTeam = (currentTeam + 1) % 2;
+      if (currentTeam === 0) patternIndex++;
     }
 
     const finalEmbed = new EmbedBuilder()
@@ -110,7 +141,7 @@ module.exports = {
     for (let i = 0; i < 2; i++) {
       const teamVoiceChannel = await guild.channels.create({
         name: `Team ${i + 1} - Game ${gameNumber}`,
-        type: 2, // 2 is the channel type for voice channels
+        type: 2,
         parent: voiceChannel.parent,
         permissionOverwrites: [
           {

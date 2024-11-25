@@ -60,19 +60,25 @@ module.exports = {
             return interaction.editReply('Could not find team channels. Please ensure they are named "Team 1 - Game {number}" and "Team 2 - Game {number}".');
         }
         
-        // Get players in each team
-        const team1Players = team1Channel.members.map(member => member.id);
-        const team2Players = team2Channel.members.map(member => member.id);
-
-        // Validate bed breaker is in the game
-        const allGamePlayers = [...team1Players, ...team2Players];
-        if (!allGamePlayers.includes(bedBreaker.id)) {
-            return interaction.editReply('Bed breaker must be a player in the game.');
+        // Fetch game records from database to get original team members
+        const gameRecord = await query('games', 'findOne', { game_number: gameNumber });
+        if (!gameRecord) {
+            return interaction.editReply('Unable to find game record. Please contact an administrator.');
         }
 
-        // Validate MVP is in the game
+        // Parse team members from the original game record
+        const team1Players = JSON.parse(gameRecord.team1_members || '[]');
+        const team2Players = JSON.parse(gameRecord.team2_members || '[]');
+        const allGamePlayers = [...team1Players, ...team2Players];
+
+        // Validate bed breaker was in the game
+        if (!allGamePlayers.includes(bedBreaker.id)) {
+            return interaction.editReply('Bed breaker must be a player who was in the game.');
+        }
+
+        // Validate MVP was in the game
         if (!allGamePlayers.includes(mvp.id)) {
-            return interaction.editReply('MVP must be a player in the game.');
+            return interaction.editReply('MVP must be a player who was in the game.');
         }
 
         try {
@@ -85,6 +91,7 @@ module.exports = {
                     mvp: mvp.id,
                     proof_image: proofImage.url,
                     bed_breaker: bedBreaker.id,
+                    // Use the original team members from the game record
                     team1_members: JSON.stringify(team1Players),
                     team2_members: JSON.stringify(team2Players)
                 }}
@@ -102,8 +109,8 @@ module.exports = {
                 .setDescription(`Game Mode: ${gameMode}`)
                 .addFields(
                     { name: 'Winning Team', value: winningTeam },
-                    { name: 'MVP', value: mvp.toString() },
-                    { name: 'Bed Breaker', value: bedBreaker.toString() }
+                    { name: 'MVP', value: `<@${mvp.id}>` },
+                    { name: 'Bed Breaker', value: `<@${bedBreaker.id}>` }
                 )
                 .setImage(proofImage.url)
                 .setTimestamp()

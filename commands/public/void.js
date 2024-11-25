@@ -59,7 +59,6 @@ module.exports = {
                 cancelVotes.add(i.user.id);
             }
 
-            // Update button labels with vote counts
             const updatedRow = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
@@ -90,10 +89,15 @@ module.exports = {
         
                     await logChannel.send({ embeds: [voidPassedEmbed] });
                 }
-        
+
+                const confirmationEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setDescription(`Game #${gameNumber} will be voided and all game-related channels will be deleted in 60 seconds.`)
+                    .setTimestamp();
+
                 await voteMessage.edit({ 
                     content: null,
-                    embeds: [], 
+                    embeds: [confirmationEmbed], 
                     components: [] 
                 });
         
@@ -109,9 +113,8 @@ module.exports = {
         });
         
         async function voidGame(guild, game, logChannel) {
-            // Get waiting room channel ID from database and move players
-            const guildSettings = await query('others', 'findOne', { guild_id: guild.id });
-            const waitingRoomId = guildSettings?.waiting_room;
+            // Move players to waiting room using config
+            const waitingRoomId = config.waitingChannel;
         
             if (waitingRoomId) {
                 const waitingRoom = await guild.channels.fetch(waitingRoomId);

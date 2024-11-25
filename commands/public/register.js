@@ -29,19 +29,39 @@ module.exports = {
     .addStringOption((option) =>
       option.setName("name").setDescription("Your name").setRequired(true)
     ),
+
   async execute(interaction) {
     const name = interaction.options.getString("name");
 
     try {
-      await interaction.deferReply({ ephemeral: true });
+      // Try to fetch the player data first without deferring
+      let playerExists = true;
+      try {
+        await axios.get(`https://api.ngmc.co/v1/players/${name}`);
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          playerExists = false;
+          const embed = createEmbed(
+            'Registration Failed', 
+            'This player does not exist.', 
+            '#FF0000'
+          );
+          return await interaction.reply({ embeds: [embed] }); // Non-ephemeral reply
+        }
+      }
 
+      if (!playerExists) return;
+
+      // If player exists, continue with registration process
+      await interaction.deferReply({ ephemeral: true });
+      
       const res = await axios.get(`https://api.ngmc.co/v1/players/${name}`);
       
       if (res.data.banned === true) {
         const embed = createEmbed('Registration Failed', 'You are banned from the server.', '#FF0000');
         return await interaction.editReply({ embeds: [embed] });
       }
-     
+      
       const discorduser = await query('registered', 'findOne', { discord_id: interaction.user.id });
       if (discorduser) {
         const embed = createEmbed('Registration Failed', 'You are already registered.', config.embedCorrect);
@@ -77,17 +97,29 @@ module.exports = {
 
         await updateEloAndNickname(interaction.user.id, interaction.guild);
         
-        const embed = createEmbed('Registration Successful', `You are now registered as ${name} with initial ELO ${initialElo}.`, config.embedCorrect);
+        const embed = createEmbed(
+          'Registration Successful', 
+          `You are now registered as ${name} with initial ELO ${initialElo}.`, 
+          config.embedCorrect
+        );
         return await interaction.editReply({ embeds: [embed] });
       }
     } catch (error) {
       console.error('Error in register command:', error);
       
       if (interaction.deferred || interaction.replied) {
-        const embed = createEmbed('Registration Failed', 'An error occurred during registration. Please try again later.', '#FF0000');
+        const embed = createEmbed(
+          'Registration Failed', 
+          'An error occurred during registration. Please try again later.', 
+          '#FF0000'
+        );
         await interaction.editReply({ embeds: [embed] }).catch(console.error);
       } else {
-        const embed = createEmbed('Registration Failed', 'An error occurred during registration. Please try again later.', '#FF0000');
+        const embed = createEmbed(
+          'Registration Failed', 
+          'An error occurred during registration. Please try again later.', 
+          '#FF0000'
+        );
         await interaction.reply({ embeds: [embed], ephemeral: true }).catch(console.error);
       }
     }

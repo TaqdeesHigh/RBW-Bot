@@ -7,7 +7,6 @@ const ms = require('ms');
 function validateDuration(durationInput) {
   // Allow days, hours, and minutes
   const validUnits = ['d', 'h', 'm', 'day', 'hour', 'min', 'days', 'hours', 'minutes'];
-  
   // Require at least one valid unit
   const match = durationInput.match(/^(\d+)([a-zA-Z]+)$/);
   if (!match) return false;

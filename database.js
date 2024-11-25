@@ -104,7 +104,6 @@ async function healthCheck() {
     const connection = await pool.getConnection();
     await connection.query('SELECT 1');
     connection.release();
-    console.log('Health check passed');
   } catch (error) {
     console.error('Health check failed:', error);
   }

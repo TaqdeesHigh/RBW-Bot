@@ -41,18 +41,31 @@ module.exports = {
         const status = interaction.options.getString('status');
 
         try {
-            // Retrieve game details from database
-            const game = await query('games', 'findOne', { game_number: gameNumber });
+            // Add logging to debug
+            console.log('Searching for game number:', gameNumber);
 
-            if (!game || game.status !== 'submitted') {
+            // Modified query to directly use SQL for more precise searching
+            const gameQuery = `
+                SELECT * FROM games 
+                WHERE game_number = ? 
+                AND status = 'submitted'
+                LIMIT 1
+            `;
+            
+            const games = await query(null, 'raw', gameQuery, [gameNumber]);
+            console.log('Found games:', games);
+
+            if (!games || games.length === 0) {
                 return interaction.editReply('Game not found or not in submitted status.');
             }
+
+            const game = games[0];
 
             // Find the category and channels
             const guild = interaction.guild;
             
             const category = guild.channels.cache.find(
-                c => c.name === `Game-2v2-${gameNumber}` && c.type === 4
+                c => c.name === `Game-${game.gamemode}-${gameNumber}` && c.type === 4
             );
 
             if (!category) {
@@ -92,11 +105,14 @@ module.exports = {
                 losingTeamPlayers = team1Players;
             }
 
-            // Update game status
-            await query('games', 'updateOne', 
-                { game_number: gameNumber }, 
-                { $set: { status: status } }
-            );
+            // Update game status using raw SQL query
+            const updateQuery = `
+                UPDATE games 
+                SET status = ? 
+                WHERE game_number = ?
+            `;
+            
+            await query(null, 'raw', updateQuery, [status, gameNumber]);
 
             // Only process ELO and stats if game is validated
             if (status === 'validated') {
@@ -120,10 +136,15 @@ module.exports = {
                 // Statistical tracking for all players
                 const allPlayers = [...winningTeamPlayers, ...losingTeamPlayers];
 
-                // Modify the statistical tracking section like this:
                 for (const player of allPlayers) {
                     // Retrieve current user stats
-                    const userStats = await query('stats', 'findOne', { discord_id: player });
+                    const statsQuery = `
+                        SELECT * FROM stats 
+                        WHERE discord_id = ?
+                        LIMIT 1
+                    `;
+                    const userStatsResult = await query(null, 'raw', statsQuery, [player]);
+                    const userStats = userStatsResult[0];
                     
                     // Determine if player was in winning or losing team
                     const isWinner = winningTeamPlayers.includes(player);
@@ -139,42 +160,41 @@ module.exports = {
                     const newGames = currentGames + 1;
                     const newWLR = calculateWLR(newWins, newLosses);
                     
-                    // Prepare update object with explicit values
-                    const updateData = {
-                        wins: newWins,
-                        lost: newLosses,
-                        wlr: newWLR,
-                        games: newGames
-                    };
+                    // Update stats using raw SQL
+                    const updateStatsQuery = `
+                        UPDATE stats 
+                        SET wins = ?, 
+                            lost = ?, 
+                            wlr = ?, 
+                            games = ?
+                        WHERE discord_id = ?
+                    `;
                     
-                    // Atomic database update
-                    await query('stats', 'updateOne', 
-                        { discord_id: player },
-                        { 
-                            $set: {
-                                wins: updateData.wins,
-                                lost: updateData.lost,
-                                wlr: updateData.wlr,
-                                games: updateData.games
-                            }
-                        }
-                    );
+                    await query(null, 'raw', updateStatsQuery, [
+                        newWins,
+                        newLosses,
+                        newWLR,
+                        newGames,
+                        player
+                    ]);
 
                     // Track special achievements
                     if (player === game.mvp) {
-                        const currentMvp = userStats?.mvp || 0;
-                        await query('stats', 'updateOne', 
-                            { discord_id: player },
-                            { $set: { mvp: currentMvp + 1 } }
-                        );
+                        const updateMvpQuery = `
+                            UPDATE stats 
+                            SET mvp = COALESCE(mvp, 0) + 1 
+                            WHERE discord_id = ?
+                        `;
+                        await query(null, 'raw', updateMvpQuery, [player]);
                     }
                     
                     if (player === game.bed_breaker) {
-                        const currentBedBreaker = userStats?.bed_breaker || 0;
-                        await query('stats', 'updateOne', 
-                            { discord_id: player },
-                            { $set: { bed_breaker: currentBedBreaker + 1 } }
-                        );
+                        const updateBedBreakerQuery = `
+                            UPDATE stats 
+                            SET bed_breaker = COALESCE(bed_breaker, 0) + 1 
+                            WHERE discord_id = ?
+                        `;
+                        await query(null, 'raw', updateBedBreakerQuery, [player]);
                     }
                 }
 
@@ -214,27 +234,21 @@ module.exports = {
             const countdownEmbed = new EmbedBuilder()
                 .setColor('#FF0000')
                 .setTitle('Game Channels Deletion')
-                .setDescription(`Game channels will be deleted in 60 seconds. Please ensure you have all necessary information.`);
+                .setDescription('Game channels will be deleted in 60 seconds. Please ensure you have all necessary information.');
 
             await gameTextChannel.send({ embeds: [countdownEmbed] });
 
             // Schedule channel and category deletion
             setTimeout(async () => {
                 try {
-                    // Delete team channels
                     await team1Channel.delete('Game scored');
                     await team2Channel.delete('Game scored');
-
-                    // Delete game text channel
                     await gameTextChannel.delete('Game scored');
-
-                    // Delete category
                     await category.delete('Game scored');
                 } catch (deleteError) {
                     console.error('Error deleting game channels:', deleteError);
-                    // Optionally, log this to a specific error channel
                 }
-            }, 60000); // 60 seconds
+            }, 60000);
 
             await interaction.editReply(`Game #${gameNumber} has been ${status}. Channels will be deleted in 60 seconds.`);
 

@@ -4,10 +4,8 @@ const config = require('../../config.json');
 
 async function checkAndRemoveBans(client) {
   try {
-    console.log('Starting unban job check...');
-    
+
     const now = Date.now();
-    console.log('Current time:', new Date(now).toISOString());
 
     // Get all queue bans
     const allBans = await query('punishments', 'raw', `
@@ -16,21 +14,14 @@ async function checkAndRemoveBans(client) {
       AND expiration IS NOT NULL
     `);
 
-    console.log('All current queue bans:', allBans);
-
     // Check which bans are expired
     const expiredBans = allBans.filter(ban => {
       const expTime = new Date(ban.expiration).getTime();
       const timeLeft = expTime - now;
-      console.log(`Ban ID: ${ban.discord_id} - Expires: ${new Date(expTime).toISOString()} - Time left: ${timeLeft}ms`);
       return timeLeft <= 0;
     });
 
-    console.log('Number of expired bans found:', expiredBans.length);
-
     for (const ban of expiredBans) {
-      console.log('Processing expired queue ban:', ban);
-
       try {
         // Remove from database
         await query('punishments', 'raw', `
@@ -63,7 +54,6 @@ async function checkAndRemoveBans(client) {
           .setFooter({ text: `${client.user.username}` });
 
         await alertChannel.send({ embeds: [unbanEmbed] });
-        console.log('Sent queue ban expiry notification to alert channel');
 
       } catch (error) {
         console.error(`Error processing queue ban expiration for user ${ban.discord_id}:`, error);

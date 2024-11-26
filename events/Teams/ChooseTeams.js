@@ -24,30 +24,39 @@ module.exports = {
       const teamSize = parseInt(gamemode.charAt(0));
       const teams = [[], []];
 
-      // Select captains randomly
-      const captains = members.sort(() => 0.5 - Math.random()).slice(0, 2);
+      // Select captains randomly with validation
+      const validMembers = members.filter(member => member?.user);
+      if (validMembers.length < 2) {
+        await textChannel.send("Error: Not enough valid members for team selection.");
+        return;
+      }
+
+      const captains = validMembers.sort(() => 0.5 - Math.random()).slice(0, 2);
       teams[0].push(captains[0]);
       teams[1].push(captains[1]);
 
-      await textChannel.send({
-        embeds: [new EmbedBuilder()
-          .setColor(EMBED_COLOR)
-          .setTitle('Team Captains Selected')
-          .addFields(
-            { name: 'Team 1 Captain', value: captains[0].user.username, inline: true },
-            { name: 'Team 2 Captain', value: captains[1].user.username, inline: true }
-          )
-          .setTimestamp()]
-      });
+      const captainsEmbed = new EmbedBuilder()
+        .setColor(EMBED_COLOR)
+        .setTitle('Team Captains Selected')
+        .addFields(
+          { name: 'Team 1 Captain', value: captains[0].user.username, inline: true },
+          { name: 'Team 2 Captain', value: captains[1].user.username, inline: true }
+        )
+        .setTimestamp();
+
+      await textChannel.send({ embeds: [captainsEmbed] });
 
       let remainingMembers = members.filter(member => !captains.includes(member));
-      // Define the correct picking pattern: [team number, number of picks]
+
+      // Define picking pattern based on gamemode
       const pickingOrder = gamemode === '3v3' ? 
-        [[0, 1], [1, 2], [0, 1]] :  // 3v3: Team 1 picks 1, Team 2 picks 2, Team 1 gets last
-        [[0, 1], [1, 2], [0, 2], [1, 1]];  // 4v4: Team 1 picks 1, Team 2 picks 2, Team 1 picks 2, Team 2 gets last
+        [[0, 1], [1, 2], [0, 1]] :  // 3v3 pattern
+        [[0, 1], [1, 2], [0, 2], [1, 1]];  // 4v4 pattern
 
       for (const [orderIndex, [teamNumber, pickCount]] of pickingOrder.entries()) {
-        // If this is the last pick and only one player remains, auto-assign
+        const currentCaptain = captains[teamNumber];
+        
+        // Auto-assign last player if only one remains
         if (remainingMembers.length === 1 && orderIndex === pickingOrder.length - 1) {
           const lastPlayer = remainingMembers[0];
           teams[teamNumber].push(lastPlayer);
@@ -59,10 +68,10 @@ module.exports = {
         const selectionEmbed = new EmbedBuilder()
           .setColor(EMBED_COLOR)
           .setTitle(`Team ${teamNumber + 1} Selection`)
-          .setDescription(`${captains[teamNumber].user}, select ${pickCount} player${pickCount > 1 ? 's' : ''}\nType "pick" or "p" followed by mentioning the player (e.g., "pick @player" or "p @player")`)
+          .setDescription(`${currentCaptain.user.username}, select ${pickCount} player${pickCount > 1 ? 's' : ''}\nType "pick @player" or "p @player"`)
           .addFields({
             name: 'Available Players',
-            value: remainingMembers.map(member => `${member.user.username} (<@${member.id}>)`).join('\n')
+            value: remainingMembers.map(member => `${member.user.username} (<@${member.id}>)`).join('\n') || 'No players available'
           })
           .setTimestamp();
 
@@ -71,15 +80,24 @@ module.exports = {
         let selectedCount = 0;
         const selectionTimeout = 30000; // 30 seconds
 
-        while (selectedCount < pickCount) {
+        while (selectedCount < pickCount && remainingMembers.length > 0) {
           try {
             const collected = await textChannel.awaitMessages({
               filter: m => {
-                if (m.author.id !== captains[teamNumber].id) return false;
+                // Strict captain validation
+                if (m.author.id !== currentCaptain.id) return false;
+                
                 const content = m.content.toLowerCase();
                 const hasPickCommand = content.startsWith('pick ') || content.startsWith('p ');
-                return hasPickCommand && m.mentions.members.size === 1 &&
-                       remainingMembers.some(rm => rm.id === m.mentions.members.first().id);
+                
+                if (!hasPickCommand || !m.mentions.members.size === 1) return false;
+                
+                const mentionedMember = m.mentions.members.first();
+                
+                // Prevent picking from other team
+                if (teams[teamNumber === 0 ? 1 : 0].some(member => member.id === mentionedMember.id)) return false;
+                
+                return remainingMembers.some(rm => rm.id === mentionedMember.id);
               },
               max: 1,
               time: selectionTimeout,
@@ -98,44 +116,53 @@ module.exports = {
               await textChannel.send(`${selectedMember.user.username} added to Team ${teamNumber + 1} (Pick ${selectedCount}/${pickCount})`);
             }
           } catch (error) {
-            // Handle timeout by randomly selecting a player
-            const randomIndex = Math.floor(Math.random() * remainingMembers.length);
-            const randomMember = remainingMembers[randomIndex];
-            teams[teamNumber].push(randomMember);
-            remainingMembers = remainingMembers.filter(m => m.id !== randomMember.id);
-            selectedCount++;
+            // Random selection on timeout
+            if (remainingMembers.length > 0) {
+              const randomIndex = Math.floor(Math.random() * remainingMembers.length);
+              const randomMember = remainingMembers[randomIndex];
+              teams[teamNumber].push(randomMember);
+              remainingMembers = remainingMembers.filter(m => m.id !== randomMember.id);
+              selectedCount++;
 
-            await textChannel.send(`⏰ Time's up! Randomly added ${randomMember.user.username} to Team ${teamNumber + 1}`);
+              await textChannel.send(`⏰ Time's up! Randomly added ${randomMember.user.username} to Team ${teamNumber + 1}`);
+            }
           }
         }
       }
 
-      // Create team channels
+      // Create team channels with error handling
       const teamChannels = await Promise.all([0, 1].map(async (i) => {
-        return await guild.channels.create({
-          name: `Team ${i + 1} - Game ${gameNumber}`,
-          type: 2,
-          parent: voiceChannel.parent,
-          permissionOverwrites: [
-            {
-              id: guild.roles.everyone.id,
-              deny: [PermissionsBitField.Flags.ViewChannel],
-            },
-            ...members.map(member => ({
-              id: member.id,
-              allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
-            })),
-          ],
-        });
+        try {
+          return await guild.channels.create({
+            name: `Team ${i + 1} - Game ${gameNumber}`,
+            type: 2,
+            parent: voiceChannel.parent,
+            permissionOverwrites: [
+              {
+                id: guild.roles.everyone.id,
+                deny: [PermissionsBitField.Flags.ViewChannel],
+              },
+              ...members.map(member => ({
+                id: member.id,
+                allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+              })),
+            ],
+          });
+        } catch (error) {
+          console.error(`Failed to create team channel ${i + 1}:`, error);
+          throw error;
+        }
       }));
 
-      // Move members to their channels
+      // Move members to their channels with error handling
       await Promise.all(teams.map(async (team, index) => {
         return Promise.all(team.map(async (member) => {
           try {
-            await member.voice.setChannel(teamChannels[index]);
+            if (member?.voice?.setChannel) {
+              await member.voice.setChannel(teamChannels[index]);
+            }
           } catch (error) {
-            console.error(`Failed to move ${member.user.username}:`, error);
+            console.error(`Failed to move ${member.user?.username || 'unknown member'}:`, error);
           }
         }));
       }));
@@ -150,7 +177,11 @@ module.exports = {
       });
 
       // Delete original channel
-      await voiceChannel.delete().catch(console.error);
+      try {
+        await voiceChannel.delete();
+      } catch (error) {
+        console.error('Failed to delete original voice channel:', error);
+      }
 
       // Update game status in database
       await query('games', 'updateOne', 
@@ -169,7 +200,7 @@ module.exports = {
         .addFields(
           teams.map((team, index) => ({
             name: `Team ${index + 1}`,
-            value: team.map(member => member.user.username).join('\n'),
+            value: team.map(member => member.user?.username || 'Unknown Player').join('\n'),
             inline: true
           }))
         )

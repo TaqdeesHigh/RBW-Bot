@@ -5,7 +5,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('q')
     .setDescription('Show queued players in the current game'),
-  name: 'q', // Explicitly add name property
+  name: 'q',
   async execute(interaction) {
     try {
       const channel = interaction.channel;
@@ -25,11 +25,67 @@ module.exports = {
 
       const team1Members = JSON.parse(gameData.team1_members);
       const team2Members = JSON.parse(gameData.team2_members);
-
+      
       const embed = new EmbedBuilder()
         .setColor('#0099ff')
-        .setTitle(`Game ${gameNumber} - Queued Players`)
-        .addFields(
+        .setTitle(`Game ${gameNumber} - Players`)
+        .setFooter({ text: `Gamemode: ${gameData.gamemode}` });
+
+      if (gameData.status === 'picking') {
+        // During picking phase
+        const allMembers = [...team1Members, ...team2Members];
+        const team1Captain = team1Members[0];
+        const team2Captain = team2Members[0];
+        
+        // Get picked players (excluding captains)
+        const team1Picked = team1Members.slice(1);
+        const team2Picked = team2Members.slice(1);
+        
+        // Get remaining players
+        const remainingPlayers = allMembers.filter(id => 
+          !team1Members.includes(id) && !team2Members.includes(id)
+        );
+
+        embed.addFields(
+          { 
+            name: 'Team 1 Captain', 
+            value: await getMemberNames([team1Captain], interaction.client),
+            inline: true 
+          },
+          { 
+            name: 'Team 2 Captain', 
+            value: await getMemberNames([team2Captain], interaction.client),
+            inline: true 
+          },
+          { name: '\u200B', value: '\u200B', inline: true } // Empty field for alignment
+        );
+
+        if (team1Picked.length > 0 || team2Picked.length > 0) {
+          embed.addFields(
+            { 
+              name: 'Team 1 Picked', 
+              value: await getMemberNames(team1Picked, interaction.client),
+              inline: true 
+            },
+            { 
+              name: 'Team 2 Picked', 
+              value: await getMemberNames(team2Picked, interaction.client),
+              inline: true 
+            },
+            { name: '\u200B', value: '\u200B', inline: true } // Empty field for alignment
+          );
+        }
+
+        if (remainingPlayers.length > 0) {
+          embed.addFields({
+            name: 'Remaining Players',
+            value: await getMemberNames(remainingPlayers, interaction.client),
+            inline: false
+          });
+        }
+      } else {
+        // Normal display for non-picking phase
+        embed.addFields(
           { 
             name: 'Team 1', 
             value: await getMemberNames(team1Members, interaction.client), 
@@ -40,8 +96,8 @@ module.exports = {
             value: await getMemberNames(team2Members, interaction.client), 
             inline: true 
           }
-        )
-        .setFooter({ text: `Gamemode: ${gameData.gamemode}` });
+        );
+      }
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
@@ -52,6 +108,8 @@ module.exports = {
 };
 
 async function getMemberNames(memberIds, client) {
+  if (!memberIds || memberIds.length === 0) return 'None';
+  
   const names = await Promise.all(memberIds.map(async (id) => {
     try {
       const member = await client.users.fetch(id);
@@ -61,5 +119,5 @@ async function getMemberNames(memberIds, client) {
     }
   }));
 
-  return names.length > 0 ? names.join('\n') : 'No players';
+  return names.join('\n');
 }

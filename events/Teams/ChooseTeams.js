@@ -10,28 +10,41 @@ module.exports = {
     const EMBED_COLOR = '#2F3136';
 
     try {
-      if (!voiceChannel || !voiceChannel.members) {
-        await textChannel.send("Error: Voice channel not found or has no members.");
+      // Get game data to access original members
+      const gameData = await query('games', 'findOne', { game_number: gameNumber });
+      if (!gameData) {
+        await textChannel.send("Error: Game data not found.");
         return;
       }
 
-      const members = Array.from(voiceChannel.members.values());
-      if (members.length === 0) {
-        await textChannel.send("Error: No members found in the voice channel.");
+      // Get all original members from both teams
+      const allMemberIds = [
+        ...JSON.parse(gameData.team1_members),
+        ...JSON.parse(gameData.team2_members)
+      ];
+
+      // Fetch all original members
+      const originalMembers = await Promise.all(
+        allMemberIds.map(async id => {
+          return await guild.members.fetch(id).catch(() => null);
+        })
+      );
+
+      const validMembers = originalMembers.filter(member => member !== null);
+      
+      if (validMembers.length < 2) {
+        await textChannel.send("Error: Not enough valid members for team selection.");
         return;
       }
 
       const teamSize = parseInt(gamemode.charAt(0));
       const teams = [[], []];
 
-      // Select captains randomly with validation
-      const validMembers = members.filter(member => member?.user);
-      if (validMembers.length < 2) {
-        await textChannel.send("Error: Not enough valid members for team selection.");
-        return;
-      }
+      // Select captains randomly
+      const captains = validMembers
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 2);
 
-      const captains = validMembers.sort(() => 0.5 - Math.random()).slice(0, 2);
       teams[0].push(captains[0]);
       teams[1].push(captains[1]);
 
@@ -46,17 +59,18 @@ module.exports = {
 
       await textChannel.send({ embeds: [captainsEmbed] });
 
-      let remainingMembers = members.filter(member => !captains.includes(member));
+      // Filter out captains from available members
+      let remainingMembers = validMembers.filter(member => 
+        !captains.some(captain => captain.id === member.id)
+      );
 
-      // Define picking pattern based on gamemode
       const pickingOrder = gamemode === '3v3' ? 
-        [[0, 1], [1, 2], [0, 1]] :  // 3v3 pattern
-        [[0, 1], [1, 2], [0, 2], [1, 1]];  // 4v4 pattern
+        [[0, 1], [1, 2], [0, 1]] : 
+        [[0, 1], [1, 2], [0, 2], [1, 1]];
 
       for (const [orderIndex, [teamNumber, pickCount]] of pickingOrder.entries()) {
         const currentCaptain = captains[teamNumber];
         
-        // Auto-assign last player if only one remains
         if (remainingMembers.length === 1 && orderIndex === pickingOrder.length - 1) {
           const lastPlayer = remainingMembers[0];
           teams[teamNumber].push(lastPlayer);
@@ -78,13 +92,12 @@ module.exports = {
         await textChannel.send({ embeds: [selectionEmbed] });
 
         let selectedCount = 0;
-        const selectionTimeout = 30000; // 30 seconds
+        const selectionTimeout = 180000;
 
         while (selectedCount < pickCount && remainingMembers.length > 0) {
           try {
             const collected = await textChannel.awaitMessages({
               filter: m => {
-                // Strict captain validation
                 if (m.author.id !== currentCaptain.id) return false;
                 
                 const content = m.content.toLowerCase();
@@ -94,10 +107,7 @@ module.exports = {
                 
                 const mentionedMember = m.mentions.members.first();
                 
-                // Prevent picking from other team
-                if (teams[teamNumber === 0 ? 1 : 0].some(member => member.id === mentionedMember.id)) return false;
-                
-                return remainingMembers.some(rm => rm.id === mentionedMember.id);
+                return remainingMembers.some(m => m.id === mentionedMember.id);
               },
               max: 1,
               time: selectionTimeout,
@@ -107,7 +117,7 @@ module.exports = {
             const message = collected.first();
             const selectedMember = message.mentions.members.first();
 
-            if (remainingMembers.includes(selectedMember)) {
+            if (remainingMembers.some(m => m.id === selectedMember.id)) {
               teams[teamNumber].push(selectedMember);
               remainingMembers = remainingMembers.filter(m => m.id !== selectedMember.id);
               selectedCount++;
@@ -116,7 +126,6 @@ module.exports = {
               await textChannel.send(`${selectedMember.user.username} added to Team ${teamNumber + 1} (Pick ${selectedCount}/${pickCount})`);
             }
           } catch (error) {
-            // Random selection on timeout
             if (remainingMembers.length > 0) {
               const randomIndex = Math.floor(Math.random() * remainingMembers.length);
               const randomMember = remainingMembers[randomIndex];
@@ -130,44 +139,39 @@ module.exports = {
         }
       }
 
-      // Create team channels with error handling
       const teamChannels = await Promise.all([0, 1].map(async (i) => {
-        try {
-          return await guild.channels.create({
-            name: `Team ${i + 1} - Game ${gameNumber}`,
-            type: 2,
-            parent: voiceChannel.parent,
-            permissionOverwrites: [
-              {
-                id: guild.roles.everyone.id,
-                deny: [PermissionsBitField.Flags.ViewChannel],
-              },
-              ...members.map(member => ({
-                id: member.id,
-                allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
-              })),
-            ],
-          });
-        } catch (error) {
-          console.error(`Failed to create team channel ${i + 1}:`, error);
-          throw error;
-        }
+        return await guild.channels.create({
+          name: `Team ${i + 1} - Game ${gameNumber}`,
+          type: 2,
+          parent: voiceChannel.parent,
+          permissionOverwrites: [
+            {
+              id: guild.roles.everyone.id,
+              allow: [PermissionsBitField.Flags.ViewChannel],
+              deny: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+            },
+            ...validMembers.map(member => ({
+              id: member.id,
+              allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+            })),
+          ],
+        });
       }));
 
-      // Move members to their channels with error handling
-      await Promise.all(teams.map(async (team, index) => {
-        return Promise.all(team.map(async (member) => {
+
+      // Move members who are in voice channels
+      for (let i = 0; i < 2; i++) {
+        for (const member of teams[i]) {
           try {
-            if (member?.voice?.setChannel) {
-              await member.voice.setChannel(teamChannels[index]);
+            if (member.voice?.channel) {
+              await member.voice.setChannel(teamChannels[i]);
             }
           } catch (error) {
-            console.error(`Failed to move ${member.user?.username || 'unknown member'}:`, error);
+            console.log(`Note: Couldn't move ${member.user.tag} to team channel - they may have left voice`);
           }
-        }));
-      }));
+        }
+      }
 
-      // Log game start
       await gameLogger.logGameStart({
         gameNumber,
         gamemode,
@@ -176,14 +180,12 @@ module.exports = {
         startTime: new Date()
       });
 
-      // Delete original channel
       try {
         await voiceChannel.delete();
       } catch (error) {
         console.error('Failed to delete original voice channel:', error);
       }
 
-      // Update game status in database
       await query('games', 'updateOne', 
         { game_number: gameNumber }, 
         { $set: { 
@@ -193,22 +195,19 @@ module.exports = {
         }}
       );
 
-      // Send final team assignments
       const finalEmbed = new EmbedBuilder()
         .setColor(EMBED_COLOR)
         .setTitle('Final Team Assignments')
         .addFields(
           teams.map((team, index) => ({
             name: `Team ${index + 1}`,
-            value: team.map(member => member.user?.username || 'Unknown Player').join('\n'),
+            value: team.map(member => member.user.username).join('\n'),
             inline: true
           }))
         )
         .setTimestamp();
 
       await textChannel.send({ embeds: [finalEmbed] });
-      await textChannel.send("Team channels have been created and members have been moved.");
-
     } catch (error) {
       console.error('Error in captain pick execution:', error);
       await textChannel.send("An error occurred during team selection. Please contact an administrator.");

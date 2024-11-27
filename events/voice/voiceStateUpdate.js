@@ -1,4 +1,4 @@
-const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require('discord.js');
 const { query } = require('../../database');
 const { sendUnregisteredWarning } = require('../Warnings/warning');
 const crypto = require('crypto');
@@ -127,12 +127,16 @@ async function createQueuedGame(guild, members, gamemode, client) {
   const gameNumber = generateGameNumber();
 
   try {
+    // Store original members immediately
+    const originalMemberIds = Array.from(members.keys());
+    const halfSize = Math.ceil(originalMemberIds.length / 2);
+    
     const gameRecord = {
       game_number: gameNumber,
       gamemode: gamemode,
       status: 'queued',
-      team1_members: JSON.stringify(Array.from(members.keys()).slice(0, members.size / 2)),
-      team2_members: JSON.stringify(Array.from(members.keys()).slice(members.size / 2)),
+      team1_members: JSON.stringify(originalMemberIds.slice(0, halfSize)),
+      team2_members: JSON.stringify(originalMemberIds.slice(halfSize)),
       created_at: new Date()
     };
 
@@ -144,11 +148,12 @@ async function createQueuedGame(guild, members, gamemode, client) {
       permissionOverwrites: [
         {
           id: guild.id,
-          deny: [PermissionFlagsBits.ViewChannel],
+          allow: [PermissionsBitField.Flags.ViewChannel],
+          deny: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
         },
         ...Array.from(members.values()).map(member => ({
           id: member.id,
-          allow: [PermissionFlagsBits.ViewChannel],
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
         })),
       ],
     });
@@ -157,12 +162,33 @@ async function createQueuedGame(guild, members, gamemode, client) {
       name: `game-${gameNumber}`,
       type: ChannelType.GuildVoice,
       parent: category.id,
+      permissionOverwrites: [
+        {
+          id: guild.id,
+          allow: [PermissionsBitField.Flags.ViewChannel],
+          deny: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+        },
+        ...Array.from(members.values()).map(member => ({
+          id: member.id,
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+        })),
+      ],
     });
 
     const textChannel = await guild.channels.create({
       name: `game-${gameNumber}`,
       type: ChannelType.GuildText,
       parent: category.id,
+      permissionOverwrites: [
+        {
+          id: guild.id,
+          deny: [PermissionsBitField.Flags.ViewChannel], // Hide from everyone
+        },
+        ...Array.from(members.values()).map(member => ({
+          id: member.id,
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages], // Only queue members can see and send messages
+        })),
+      ],
     });
 
     await query('games', 'updateOne', 
@@ -170,15 +196,18 @@ async function createQueuedGame(guild, members, gamemode, client) {
       { $set: {
         category_id: category.id, 
         voice_channel_id: voiceChannel.id, 
-        text_channel_id: textChannel.id 
+        text_channel_id: textChannel.id
       }}
     );
 
-    for (const [, member] of members) {
+    // Try to move members who are in voice channels
+    for (const member of members.values()) {
       try {
-        await member.voice.setChannel(voiceChannel);
+        if (member.voice?.channel) {
+          await member.voice.setChannel(voiceChannel);
+        }
       } catch (error) {
-        console.error(`Error moving member ${member.user.tag}:`, error);
+        console.log(`Note: Couldn't move ${member.user.tag} to game channel - they may have left voice`);
       }
     }
 

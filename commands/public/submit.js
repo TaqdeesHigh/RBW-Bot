@@ -53,17 +53,22 @@ module.exports = {
             return interaction.editReply('Game number mismatch between channel and category. Please check the naming convention.');
         }
 
+        // Fetch game records from database to check if already submitted
+        const gameRecord = await query('games', 'findOne', { game_number: gameNumber });
+        if (!gameRecord) {
+            return interaction.editReply('Unable to find game record. Please contact an administrator.');
+        }
+
+        // Check if game has already been submitted
+        if (gameRecord.status === 'submitted' || gameRecord.status === 'completed') {
+            return interaction.editReply('This game has already been submitted and cannot be submitted again.');
+        }
+
         const team1Channel = category.children.cache.find(channel => channel.name.startsWith('Team 1 - Game') && channel.type === 2);
         const team2Channel = category.children.cache.find(channel => channel.name.startsWith('Team 2 - Game') && channel.type === 2);
         
         if (!team1Channel || !team2Channel) {
             return interaction.editReply('Could not find team channels. Please ensure they are named "Team 1 - Game {number}" and "Team 2 - Game {number}".');
-        }
-        
-        // Fetch game records from database to get original team members
-        const gameRecord = await query('games', 'findOne', { game_number: gameNumber });
-        if (!gameRecord) {
-            return interaction.editReply('Unable to find game record. Please contact an administrator.');
         }
 
         // Parse team members from the original game record
@@ -82,21 +87,29 @@ module.exports = {
         }
 
         try {
-            // Update game in database to 'submitted' status
+            // First check if game is already submitted
+            const gameStatus = await query('games', 'findOne', { game_number: gameNumber });
+            if (gameStatus && (gameStatus.status === 'submitted' || gameStatus.status === 'completed')) {
+                return interaction.editReply('This game has already been submitted and cannot be submitted again.');
+            }
+        
             await query('games', 'updateOne', 
                 { game_number: gameNumber }, 
-                { $set: { 
-                    status: 'submitted',
-                    winning_team: winningTeam,
-                    mvp: mvp.id,
-                    proof_image: proofImage.url,
-                    bed_breaker: bedBreaker.id,
-                    // Use the original team members from the game record
-                    team1_members: JSON.stringify(team1Players),
-                    team2_members: JSON.stringify(team2Players)
-                }}
+                { 
+                    $set: {
+                        status: 'submitted',
+                        winning_team: winningTeam,
+                        mvp: mvp.id,
+                        proof_image: proofImage.url,
+                        bed_breaker: bedBreaker.id,
+                        team1_members: JSON.stringify(team1Players),
+                        team2_members: JSON.stringify(team2Players),
+                        // submitted_at: new Date(),
+                        // submitted_by: interaction.user.id
+                    }
+                }
             );
-
+            
             // Send message to games-log channel
             const gameLogsChannel = interaction.client.channels.cache.get(config.GAME_LOGS);
             if (!gameLogsChannel) {

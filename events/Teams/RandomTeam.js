@@ -8,94 +8,115 @@ module.exports = {
     const gameNumber = textChannel.name.split('-')[1];
     const guild = textChannel.guild;
     const EMBED_COLOR = '#2F3136';
-
-    if (!voiceChannel || !voiceChannel.members) {
-      await textChannel.send("Error: Voice channel not found or has no members.");
-      return;
-    }
-
-    const members = Array.from(voiceChannel.members.values());
-    if (members.length === 0) {
-      await textChannel.send("Error: No members found in the voice channel.");
-      return;
-    }
-
-    const teamSize = parseInt(gamemode.charAt(0));
-    const teams = [[], []];
-
-    // Shuffle the members array
-    for (let i = members.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [members[i], members[j]] = [members[j], members[i]];
-    }
-
-    // Assign members to teams
-    for (let i = 0; i < members.length; i++) {
-      teams[i % 2].push(members[i]);
-    }
-
-    const embed = new EmbedBuilder()
-      .setColor(EMBED_COLOR)
-      .setTitle('Random Team Selection Results')
-      .setTimestamp();
-
-    teams.forEach((team, index) => {
-      embed.addFields({
-        name: `Team ${index + 1}`,
-        value: team.map(member => member.user.username).join('\n'),
-        inline: true
-      });
-    });
-
-    await textChannel.send({ embeds: [embed] });
-
-    // Create team channels
-    const teamChannels = [];
-    for (let i = 0; i < 2; i++) {
-      const teamVoiceChannel = await guild.channels.create({
-        name: `Team ${i + 1} - Game ${gameNumber}`,
-        type: 2, // 2 is the channel type for voice channels
-        parent: voiceChannel.parent,
-        permissionOverwrites: [
-          {
-            id: guild.roles.everyone.id,
-            deny: [PermissionsBitField.Flags.ViewChannel],
-          },
-          ...members.map(member => ({
-            id: member.id,
-            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
-          })),
-        ],
-      });
-      teamChannels.push(teamVoiceChannel);
-    }
-
-    // Move team members to their respective voice channels
-    for (let i = 0; i < 2; i++) {
-      for (const member of teams[i]) {
-        await member.voice.setChannel(teamChannels[i]).catch(console.error);
+  
+    try {
+      // Get the game data to access all members
+      const gameData = await query('games', 'findOne', { game_number: gameNumber });
+      if (!gameData) {
+        await textChannel.send("Error: Game data not found.");
+        return;
       }
+  
+      // Combine members from both teams to get all original members
+      const allMemberIds = [
+        ...JSON.parse(gameData.team1_members),
+        ...JSON.parse(gameData.team2_members)
+      ];
+  
+      const originalMembers = await Promise.all(
+        allMemberIds.map(async id => {
+          return await guild.members.fetch(id).catch(() => null);
+        })
+      );
+  
+      const validMembers = originalMembers.filter(member => member !== null);
+      
+      if (validMembers.length === 0) {
+        await textChannel.send("Error: No valid members found.");
+        return;
+      }
+  
+      const teams = [[], []];
+      
+      // Shuffle and assign teams
+      const shuffledMembers = [...validMembers].sort(() => 0.5 - Math.random());
+      for (let i = 0; i < shuffledMembers.length; i++) {
+        teams[i % 2].push(shuffledMembers[i]);
+      }
+  
+      // Create team channels and move members
+      const teamChannels = await Promise.all([0, 1].map(async (i) => {
+        return await guild.channels.create({
+          name: `Team ${i + 1} - Game ${gameNumber}`,
+          type: 2,
+          parent: voiceChannel.parent,
+          permissionOverwrites: [
+            {
+              id: guild.roles.everyone.id,
+              deny: [PermissionsBitField.Flags.ViewChannel],
+            },
+            ...validMembers.map(member => ({
+              id: member.id,
+              allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+            })),
+          ],
+        });
+      }));
+  
+      // Move members who are in voice channels
+      for (let i = 0; i < 2; i++) {
+        for (const member of teams[i]) {
+          try {
+            if (member.voice?.channel) {
+              await member.voice.setChannel(teamChannels[i]);
+            }
+          } catch (error) {
+            console.log(`Note: Couldn't move ${member.user.tag} to team channel - they may have left voice`);
+          }
+        }
+      }
+  
+      // Continue with game logging and cleanup
+      await gameLogger.logGameStart({
+        gameNumber,
+        gamemode,
+        selectionMethod: 'Random',
+        teams,
+        startTime: new Date()
+      });
+  
+      try {
+        await voiceChannel.delete();
+      } catch (error) {
+        console.error('Error deleting voice channel:', error);
+      }
+  
+      await query('games', 'updateOne', 
+        { game_number: gameNumber }, 
+        { $set: { 
+          status: 'in_progress', 
+          team1_members: JSON.stringify(teams[0].map(m => m.id)),
+          team2_members: JSON.stringify(teams[1].map(m => m.id))
+        }}
+      );
+  
+      // Send final team assignments
+      const finalEmbed = new EmbedBuilder()
+        .setColor(EMBED_COLOR)
+        .setTitle('Final Team Assignments')
+        .addFields(
+          teams.map((team, index) => ({
+            name: `Team ${index + 1}`,
+            value: team.map(member => member.user.username).join('\n'),
+            inline: true
+          }))
+        )
+        .setTimestamp();
+  
+      await textChannel.send({ embeds: [finalEmbed] });
+    } catch (error) {
+      console.error('Error in random team selection:', error);
+      await textChannel.send("An error occurred during team selection. Please contact an administrator.");
     }
-
-    await gameLogger.logGameStart({
-      gameNumber,
-      gamemode,
-      selectionMethod: 'Random',
-      teams,
-      startTime: new Date()
-    });
-
-    // Delete the original voice channel
-    await voiceChannel.delete();
-
-    // Update game status in database
-    await query('games', 'updateOne', 
-      { game_number: gameNumber }, 
-      { $set: { 
-        status: 'in_progress', 
-        team1_members: JSON.stringify(teams[0].map(m => m.id)),
-        team2_members: JSON.stringify(teams[1].map(m => m.id))
-      }}
-    );
   }
 };

@@ -69,19 +69,36 @@ function drawContainer(ctx, x, y, width, height) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("stats")
-        .setDescription("View your stats"),
+        .setDescription("View your stats")
+        .addUserOption(option =>
+            option
+                .setName('player')
+                .setDescription('The player whose stats you want to view')
+                .setRequired(false)
+        ),
     async execute(interaction) {
         await interaction.deferReply();
 
         try {
-            const userInfo = await query('registered', 'findOne', { discord_id: interaction.user.id });
+            // Get the target user (either mentioned user or command user)
+            const targetUser = interaction.options.getUser('player') || interaction.user;
+
+            const userInfo = await query('registered', 'findOne', { discord_id: targetUser.id });
             if (!userInfo) {
-                return await interaction.editReply('You are not registered. Please use the register command first.');
+                return await interaction.editReply(
+                    targetUser.id === interaction.user.id 
+                        ? 'You are not registered. Please use the register command first.'
+                        : `${targetUser.username} is not registered.`
+                );
             }
 
-            const stats = await query('stats', 'findOne', { discord_id: interaction.user.id });
+            const stats = await query('stats', 'findOne', { discord_id: targetUser.id });
             if (!stats) {
-                return await interaction.editReply('Stats not found. Please contact an administrator.');
+                return await interaction.editReply(
+                    targetUser.id === interaction.user.id
+                        ? 'Stats not found. Please contact an administrator.'
+                        : `Stats not found for ${targetUser.username}. Please contact an administrator.`
+                );
             }
 
             const statsImage = await createStatsCanvas(stats, userInfo.mc_user);
@@ -90,7 +107,7 @@ module.exports = {
             await interaction.editReply({ files: [attachment] });
         } catch (error) {
             console.error(error);
-            await interaction.editReply('An error occurred while fetching your stats.');
+            await interaction.editReply('An error occurred while fetching the stats.');
         }
     },
 };

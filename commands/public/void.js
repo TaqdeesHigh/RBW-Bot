@@ -80,7 +80,48 @@ module.exports = {
         
             const logChannel = interaction.client.channels.cache.get(config.logsChannel);
         
-            if (proceedCount > cancelCount) {
+            // Handle tie by random decision
+            if (proceedCount === cancelCount) {
+                // 50/50 chance to void or not void
+                const shouldVoid = Math.random() < 0.5;
+                
+                const tiebreakEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setDescription(`Votes were tied ${proceedCount}-${cancelCount}. Random decision: ${shouldVoid ? 'Game will be voided' : 'Game will continue'}`)
+                    .setTimestamp();
+        
+                await voteMessage.edit({
+                    content: null,
+                    embeds: [tiebreakEmbed],
+                    components: []
+                });
+        
+                if (shouldVoid) {
+                    if (logChannel) {
+                        const voidPassedEmbed = new EmbedBuilder()
+                            .setColor('#FF0000')
+                            .setDescription(`**Game** \`#${gameNumber}\` **void vote passed (by tiebreaker)**`)
+                            .setTimestamp();
+        
+                        await logChannel.send({ embeds: [voidPassedEmbed] });
+                    }
+        
+                    const confirmationEmbed = new EmbedBuilder()
+                        .setColor('#FF0000')
+                        .setDescription(`Game #${gameNumber} will be voided and all game-related channels will be deleted in 60 seconds.`)
+                        .setTimestamp();
+        
+                    await voteMessage.edit({
+                        content: null,
+                        embeds: [confirmationEmbed],
+                        components: []
+                    });
+        
+                    await new Promise(resolve => setTimeout(resolve, 60000));
+                    await voidGame(interaction.guild, game, logChannel);
+                }
+            } else if (proceedCount > cancelCount) {
+                // Rest of the original "proceed" logic
                 if (logChannel) {
                     const voidPassedEmbed = new EmbedBuilder()
                         .setColor('#FF0000')
@@ -89,25 +130,25 @@ module.exports = {
         
                     await logChannel.send({ embeds: [voidPassedEmbed] });
                 }
-
+        
                 const confirmationEmbed = new EmbedBuilder()
                     .setColor('#FF0000')
                     .setDescription(`Game #${gameNumber} will be voided and all game-related channels will be deleted in 60 seconds.`)
                     .setTimestamp();
-
-                await voteMessage.edit({ 
+        
+                await voteMessage.edit({
                     content: null,
-                    embeds: [confirmationEmbed], 
-                    components: [] 
+                    embeds: [confirmationEmbed],
+                    components: []
                 });
         
                 await new Promise(resolve => setTimeout(resolve, 60000));
                 await voidGame(interaction.guild, game, logChannel);
             } else {
-                await voteMessage.edit({ 
+                await voteMessage.edit({
                     content: null,
-                    embeds: [], 
-                    components: [] 
+                    embeds: [],
+                    components: []
                 });
             }
         });

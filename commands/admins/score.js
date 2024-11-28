@@ -220,11 +220,17 @@ module.exports = {
             if (status === 'validated' && config.waitingChannel) {
                 const waitingChannel = interaction.guild.channels.cache.get(config.waitingChannel);
                 if (waitingChannel) {
-                    const allPlayers = [...team1Players, ...team2Players];
-                    for (const playerId of allPlayers) {
-                        const player = await interaction.guild.members.fetch(playerId);
-                        if (player.voice.channel) {
-                            await player.voice.setChannel(waitingChannel).catch(console.error);
+                    // Get all voice channels in the game category
+                    const gameVoiceChannels = [team1Channel, team2Channel];
+                    
+                    // Move only players who are in the game's voice channels
+                    for (const voiceChannel of gameVoiceChannels) {
+                        // Get all members currently in this voice channel
+                        const membersInChannel = voiceChannel.members;
+                        
+                        // Move each member to waiting room
+                        for (const [, member] of membersInChannel) {
+                            await member.voice.setChannel(waitingChannel).catch(console.error);
                         }
                     }
                 }

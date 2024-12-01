@@ -38,6 +38,10 @@ A comprehensive Discord bot for managing ranked bedwars matches with auto-queuin
 - `/unban` - Remove queue restrictions
 - `/updateGamemodeChannels` - Set up required queuing channels
 
+## NOTE: Yeah, there’s more commands—so what?  
+## Slammed this together with ChatGPT in 5 minutes. Babysit it? Nah.  
+## Wanna update it? Do it yourself, champ. I’m out.  
+
 ## Installation
 
 1. Clone the repository

@@ -32,49 +32,56 @@ module.exports = {
         .setFooter({ text: `Gamemode: ${gameData.gamemode}` });
 
       if (gameData.status === 'picking') {
-        // During picking phase
-        const allMembers = [...team1Members, ...team2Members];
+        // Get all players in the queue
+        const queuedPlayers = [...team1Members, ...team2Members];
+        
+        // During picking phase, only show captain and picked players
         const team1Captain = team1Members[0];
         const team2Captain = team2Members[0];
         
-        // Get picked players (excluding captains)
+        // Only show picked players (excluding captains) if they exist
         const team1Picked = team1Members.slice(1);
         const team2Picked = team2Members.slice(1);
-        
-        // Get remaining players
-        const remainingPlayers = allMembers.filter(id => 
-          !team1Members.includes(id) && !team2Members.includes(id)
-        );
 
-        embed.addFields(
-          { 
-            name: 'Team 1 Captain', 
-            value: await getMemberNames([team1Captain], interaction.client),
-            inline: true 
-          },
-          { 
-            name: 'Team 2 Captain', 
-            value: await getMemberNames([team2Captain], interaction.client),
-            inline: true 
-          },
-          { name: '\u200B', value: '\u200B', inline: true } // Empty field for alignment
-        );
+        // Show captains
+        if (team1Captain || team2Captain) {
+          embed.addFields(
+            { 
+              name: 'Team 1 Captain', 
+              value: await getMemberNames([team1Captain], interaction.client),
+              inline: true 
+            },
+            { 
+              name: 'Team 2 Captain', 
+              value: await getMemberNames([team2Captain], interaction.client),
+              inline: true 
+            },
+            { name: '\u200B', value: '\u200B', inline: true }
+          );
+        }
 
+        // Show picked players only if there are any
         if (team1Picked.length > 0 || team2Picked.length > 0) {
           embed.addFields(
             { 
               name: 'Team 1 Picked', 
-              value: await getMemberNames(team1Picked, interaction.client),
+              value: await getMemberNames(team1Picked, interaction.client) || 'None',
               inline: true 
             },
             { 
               name: 'Team 2 Picked', 
-              value: await getMemberNames(team2Picked, interaction.client),
+              value: await getMemberNames(team2Picked, interaction.client) || 'None',
               inline: true 
             },
-            { name: '\u200B', value: '\u200B', inline: true } // Empty field for alignment
+            { name: '\u200B', value: '\u200B', inline: true }
           );
         }
+
+        // Calculate remaining players (players who haven't been picked yet)
+        const pickedPlayers = [...team1Members, ...team2Members];
+        const remainingPlayers = queuedPlayers.filter(id => 
+          !team1Members.includes(id) && !team2Members.includes(id)
+        );
 
         if (remainingPlayers.length > 0) {
           embed.addFields({

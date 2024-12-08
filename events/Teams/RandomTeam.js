@@ -10,6 +10,15 @@ module.exports = {
     const EMBED_COLOR = '#2F3136';
   
     try {
+
+      // Check if channel still exists before proceeding
+      const channel = await client.channels.fetch(textChannel.id)
+          .catch(() => null);
+      
+      if (!channel) {
+          return; // Channel was deleted, likely due to void
+      }
+
       // Get the game data to access all members
       const gameData = await query('games', 'findOne', { game_number: gameNumber });
       if (!gameData) {

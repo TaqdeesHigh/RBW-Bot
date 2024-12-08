@@ -32,7 +32,7 @@ module.exports = {
       }
 
       const pingOption = interaction.options.getString("ping");
-      const roleId = '1312797707815096360';
+      const roleId = '1312796517106712607';
       const role = interaction.guild.roles.cache.get(roleId);
 
       if (!role) {
@@ -44,7 +44,6 @@ module.exports = {
 
       await interaction.deferReply();
 
-      // Fixed query to get all registered players
       const sql = "SELECT * FROM registered";
       const registeredPlayers = await query(null, 'raw', sql);
 

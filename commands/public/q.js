@@ -25,24 +25,43 @@ module.exports = {
 
       const team1Members = JSON.parse(gameData.team1_members);
       const team2Members = JSON.parse(gameData.team2_members);
+      const allPlayers = [...team1Members, ...team2Members];
       
       const embed = new EmbedBuilder()
         .setColor('#0099ff')
         .setTitle(`Game ${gameNumber} - Players`)
         .setFooter({ text: `Gamemode: ${gameData.gamemode}` });
 
-      if (gameData.status === 'picking') {
-        // Get all players in the queue
-        const queuedPlayers = [...team1Members, ...team2Members];
-        
-        // During picking phase, only show captain and picked players
+      // Handle different game states
+      if (gameData.status === 'queued') {
+        // During voting phase
+        embed.addFields({
+          name: 'Queued Players',
+          value: await getMemberNames(allPlayers, interaction.client),
+          inline: false
+        })
+        .setDescription('Voting in progress...');
+      } 
+      else if (gameData.status === 'in_progress') {
+        // When teams are finalized
+        embed.addFields(
+          { 
+            name: 'Team 1', 
+            value: await getMemberNames(team1Members, interaction.client), 
+            inline: true 
+          },
+          { 
+            name: 'Team 2', 
+            value: await getMemberNames(team2Members, interaction.client), 
+            inline: true 
+          }
+        );
+      }
+      else {
+        // During picking phase
         const team1Captain = team1Members[0];
         const team2Captain = team2Members[0];
         
-        // Only show picked players (excluding captains) if they exist
-        const team1Picked = team1Members.slice(1);
-        const team2Picked = team2Members.slice(1);
-
         // Show captains
         if (team1Captain || team2Captain) {
           embed.addFields(
@@ -60,16 +79,19 @@ module.exports = {
           );
         }
 
-        // Show picked players only if there are any
+        // Show picked players (excluding captains)
+        const team1Picked = team1Members.slice(1);
+        const team2Picked = team2Members.slice(1);
+
         if (team1Picked.length > 0 || team2Picked.length > 0) {
           embed.addFields(
             { 
-              name: 'Team 1 Picked', 
+              name: 'Team 1 Players', 
               value: await getMemberNames(team1Picked, interaction.client) || 'None',
               inline: true 
             },
             { 
-              name: 'Team 2 Picked', 
+              name: 'Team 2 Players', 
               value: await getMemberNames(team2Picked, interaction.client) || 'None',
               inline: true 
             },
@@ -77,33 +99,19 @@ module.exports = {
           );
         }
 
-        // Calculate remaining players (players who haven't been picked yet)
+        // Show remaining players to be picked
         const pickedPlayers = [...team1Members, ...team2Members];
-        const remainingPlayers = queuedPlayers.filter(id => 
-          !team1Members.includes(id) && !team2Members.includes(id)
+        const remainingPlayers = allPlayers.filter(id => 
+          !pickedPlayers.includes(id)
         );
 
         if (remainingPlayers.length > 0) {
           embed.addFields({
-            name: 'Remaining Players',
+            name: 'Available Players',
             value: await getMemberNames(remainingPlayers, interaction.client),
             inline: false
           });
         }
-      } else {
-        // Normal display for non-picking phase
-        embed.addFields(
-          { 
-            name: 'Team 1', 
-            value: await getMemberNames(team1Members, interaction.client), 
-            inline: true 
-          },
-          { 
-            name: 'Team 2', 
-            value: await getMemberNames(team2Members, interaction.client), 
-            inline: true 
-          }
-        );
       }
 
       await interaction.reply({ embeds: [embed] });

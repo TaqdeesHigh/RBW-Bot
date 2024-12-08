@@ -56,6 +56,7 @@ async function initDatabase() {
       )
     `);
 
+    // Create games table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS games (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -76,7 +77,7 @@ async function initDatabase() {
       )
     `);
 
-
+    // Create punishments table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS punishments (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -90,6 +91,25 @@ async function initDatabase() {
       )
     `);
 
+    // Create rank_roles table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS rank_roles (
+        guild_id VARCHAR(20) NOT NULL,
+        rank_name VARCHAR(50) NOT NULL,
+        role_id VARCHAR(20) NOT NULL,
+        display_name VARCHAR(50) NOT NULL,
+        position INT NOT NULL,
+        PRIMARY KEY (guild_id, rank_name)
+      )
+    `);
+
+    // Add indices for rank_roles
+    await connection.query(`
+      CREATE INDEX IF NOT EXISTS idx_guild_rank ON rank_roles(guild_id, rank_name);
+    `);
+    await connection.query(`
+      CREATE INDEX IF NOT EXISTS idx_role_id ON rank_roles(role_id);
+    `);
 
     console.log('Database initialized');
   } catch (error) {
@@ -98,6 +118,7 @@ async function initDatabase() {
     connection.release();
   }
 }
+
 
 async function healthCheck() {
   try {

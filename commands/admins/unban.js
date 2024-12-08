@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { query } = require('../../database');
 const config = require('../../config.json');
 
@@ -6,6 +6,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('unban')
     .setDescription('Unban a user from queuing')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addUserOption(option => 
       option.setName('user')
         .setDescription('User to unban')

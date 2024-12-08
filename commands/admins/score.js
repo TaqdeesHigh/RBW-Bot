@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { query } = require('../../database');
 const { eloCalc } = require('../../eloCalc');
 const { updateEloAndNickname } = require('../../events/Elo/updateNickName');
@@ -16,6 +16,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('score')
         .setDescription('Score a submitted game')
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addStringOption(option =>
             option.setName('game-id')
                 .setDescription('The game ID to score')
@@ -32,8 +33,8 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply({ ephemeral: true });
 
-        // Check if user has admin permissions
-        if (!interaction.member.permissions.has('ADMINISTRATOR')) {
+        // Check if user has scorer role
+        if (!interaction.member.roles.cache.has(config.scorerID)) {
             return interaction.editReply('You do not have permission to score games.');
         }
 
@@ -117,7 +118,13 @@ module.exports = {
             // Only process ELO and stats if game is validated
             if (status === 'validated') {
                 // Calculate ELO changes
-                const eloResults = await eloCalc(winningTeamPlayers, losingTeamPlayers, game.mvp);
+                const eloResults = await eloCalc(
+                    winningTeamPlayers, 
+                    losingTeamPlayers, 
+                    game.mvp, 
+                    interaction.guildId,
+                    interaction.client
+                );
 
                 // Additional MVP ELO bonus
                 const mvpEloBonus = winningTeamPlayers.includes(game.mvp) ? 15 : 5;

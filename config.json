@@ -10,77 +10,347 @@
     "ssChannel": "1279781513529000118",
     "scoreChannelID": "1309099160322052117",
     "alertID": "1296871405601685544",
+    "rbwID": "1312797707815096360",
+    "rbwpingChannelID": "1276798819614326804",
+    "scorerID": "1314971481419026462",
+    "rbwStaffID": "1312797707815096360",
     "ranks": {
         "0": "bronze1",
-        "500": "bronze2",
-        "750": "silver1",
-        "1000": "silver2",
-        "1250": "gold1",
-        "1500": "gold2",
-        "1750": "platinum1",
-        "2250": "platinum2",
-        "2500": "diamond",
-        "3000": "master"
+        "35": "bronze2",
+        "70": "bronze3",
+        "100": "silver1",
+        "135": "silver2",
+        "170": "silver3",
+        "200": "gold1",
+        "235": "gold2",
+        "270": "gold3",
+        "300": "platinum1",
+        "335": "platinum2",
+        "370": "platinum3",
+        "400": "diamond1",
+        "435": "diamond2",
+        "470": "diamond3",
+        "500": "emerald1",
+        "535": "emerald2",
+        "570": "emerald3",
+        "600": "sapphire1",
+        "635": "sapphire2",
+        "670": "sapphire3",
+        "700": "ruby1",
+        "735": "ruby2",
+        "770": "ruby3",
+        "800": "crystal1",
+        "835": "crystal2",
+        "870": "crystal3",
+        "900": "opal1",
+        "935": "opal2",
+        "970": "opal3",
+        "1000": "amethyst1",
+        "1130": "amethyst2",
+        "1165": "amethyst3",
+        "1200": "obsidian1",
+        "1235": "obsidian2",
+        "1270": "obsidian3",
+        "1400": "veteran1",
+        "1435": "veteran2",
+        "1470": "veteran3",
+        "1600": "quartz1",
+        "1635": "quartz2",
+        "1670": "quartz3",
+        "1800": "topaz1",
+        "1835": "topaz2",
+        "1870": "topaz3",
+        "2000": "netherite1",
+        "2035": "netherite2",
+        "2070": "netherite3"
     },
     "eloData": {
         "bronze1": {
             "win": 30,
             "loss": 10,
-            "draw": 0,
-            "nextRank": 500
+            "draw": 5,
+            "nextRank": 35
         },
         "bronze2": {
             "win": 28,
             "loss": 12,
-            "draw": 0,
-            "nextRank": 750
+            "draw": 5,
+            "nextRank": 70
+        },
+        "bronze3": {
+            "win": 26,
+            "loss": 14,
+            "draw": 5,
+            "nextRank": 100
         },
         "silver1": {
-            "win": 26,
-            "loss": 10,
-            "draw": 0,
-            "nextRank": 1000
+            "win": 24,
+            "loss": 16,
+            "draw": 6,
+            "nextRank": 135
         },
         "silver2": {
-            "win": 24,
-            "loss": 10,
-            "draw": 0,
-            "nextRank": 1250
+            "win": 22,
+            "loss": 18,
+            "draw": 6,
+            "nextRank": 170
+        },
+        "silver3": {
+            "win": 20,
+            "loss": 20,
+            "draw": 6,
+            "nextRank": 200
         },
         "gold1": {
-            "win": 22,
-            "loss": 12,
-            "draw": 0,
-            "nextRank": 1500
+            "win": 18,
+            "loss": 22,
+            "draw": 7,
+            "nextRank": 235
         },
         "gold2": {
-            "win": 20,
-            "loss": 15,
-            "draw": 0,
-            "nextRank": 1750
+            "win": 16,
+            "loss": 24,
+            "draw": 7,
+            "nextRank": 270
+        },
+        "gold3": {
+            "win": 15,
+            "loss": 26,
+            "draw": 7,
+            "nextRank": 300
         },
         "platinum1": {
-            "win": 18,
-            "loss": 15,
-            "draw": 0,
-            "nextRank": 2250
+            "win": 14,
+            "loss": 28,
+            "draw": 8,
+            "nextRank": 335
         },
         "platinum2": {
-            "win": 16,
-            "loss": 15,
-            "draw": 0,
-            "nextRank": 2500
+            "win": 13,
+            "loss": 30,
+            "draw": 8,
+            "nextRank": 370
         },
-        "diamond": {
-            "win": 14,
-            "loss": 18,
-            "draw": 0,
-            "nextRank": 3000
-        },
-        "master": {
+        "platinum3": {
             "win": 12,
-            "loss": 20,
-            "draw": 0
+            "loss": 32,
+            "draw": 8,
+            "nextRank": 400
+        },
+        "diamond1": {
+            "win": 11,
+            "loss": 34,
+            "draw": 9,
+            "nextRank": 435
+        },
+        "diamond2": {
+            "win": 10,
+            "loss": 36,
+            "draw": 9,
+            "nextRank": 470
+        },
+        "diamond3": {
+            "win": 9,
+            "loss": 38,
+            "draw": 9,
+            "nextRank": 500
+        },
+        "emerald1": {
+            "win": 8,
+            "loss": 40,
+            "draw": 10,
+            "nextRank": 535
+        },
+        "emerald2": {
+            "win": 7,
+            "loss": 42,
+            "draw": 10,
+            "nextRank": 570
+        },
+        "emerald3": {
+            "win": 6,
+            "loss": 45,
+            "draw": 10,
+            "nextRank": 600
+        },
+        "sapphire1": {
+            "win": 8,
+            "loss": 40,
+            "draw": 10,
+            "nextRank": 635
+        },
+        "sapphire2": {
+            "win": 7,
+            "loss": 42,
+            "draw": 10,
+            "nextRank": 670
+        },
+        "sapphire3": {
+            "win": 6,
+            "loss": 44,
+            "draw": 10,
+            "nextRank": 700
+        },
+        "ruby1": {
+            "win": 8,
+            "loss": 40,
+            "draw": 10,
+            "nextRank": 735
+        },
+        "ruby2": {
+            "win": 7,
+            "loss": 42,
+            "draw": 10,
+            "nextRank": 770
+        },
+        "ruby3": {
+            "win": 6,
+            "loss": 44,
+            "draw": 10,
+            "nextRank": 800
+        },
+        "crystal1": {
+            "win": 6,
+            "loss": 44,
+            "draw": 10,
+            "nextRank": 835
+        },
+        "crystal2": {
+            "win": 5,
+            "loss": 45,
+            "draw": 10,
+            "nextRank": 870
+        },
+        "crystal3": {
+            "win": 5,
+            "loss": 45,
+            "draw": 10,
+            "nextRank": 900
+        },
+        "opal1": {
+            "win": 5,
+            "loss": 45,
+            "draw": 10,
+            "nextRank": 935
+        },
+        "opal2": {
+            "win": 4,
+            "loss": 46,
+            "draw": 10,
+            "nextRank": 970
+        },
+        "opal3": {
+            "win": 4,
+            "loss": 46,
+            "draw": 10,
+            "nextRank": 1000
+        },
+        "amethyst1": {
+            "win": 4,
+            "loss": 46,
+            "draw": 10,
+            "nextRank": 1130
+        },
+        "amethyst2": {
+            "win": 3,
+            "loss": 47,
+            "draw": 10,
+            "nextRank": 1165
+        },
+        "amethyst3": {
+            "win": 3,
+            "loss": 47,
+            "draw": 10,
+            "nextRank": 1200
+        },
+        "obsidian1": {
+            "win": 3,
+            "loss": 47,
+            "draw": 10,
+            "nextRank": 1235
+        },
+        "obsidian2": {
+            "win": 2,
+            "loss": 48,
+            "draw": 10,
+            "nextRank": 1270
+        },
+        "obsidian3": {
+            "win": 2,
+            "loss": 48,
+            "draw": 10,
+            "nextRank": 1400
+        },
+        "veteran1": {
+            "win": 2,
+            "loss": 48,
+            "draw": 10,
+            "nextRank": 1435
+        },
+        "veteran2": {
+            "win": 1,
+            "loss": 49,
+            "draw": 10,
+            "nextRank": 1470
+        },
+        "veteran3": {
+            "win": 1,
+            "loss": 49,
+            "draw": 10,
+            "nextRank": 1600
+        },
+        "quartz1": {
+            "win": 1,
+            "loss": 49,
+            "draw": 10,
+            "nextRank": 1635
+        },
+        "quartz2": {
+            "win": 1,
+            "loss": 49,
+            "draw": 10,
+            "nextRank": 1670
+        },
+        "quartz3": {
+            "win": 1,
+            "loss": 49,
+            "draw": 10,
+            "nextRank": 1800
+        },
+        "topaz1": {
+            "win": 1,
+            "loss": 49,
+            "draw": 10,
+            "nextRank": 1835
+        },
+        "topaz2": {
+            "win": 1,
+            "loss": 49,
+            "draw": 10,
+            "nextRank": 1870
+        },
+        "topaz3": {
+            "win": 1,
+            "loss": 49,
+            "draw": 10,
+            "nextRank": 2000
+        },
+        "netherite1": {
+            "win": 6,
+            "loss": 45,
+            "draw": 10,
+            "nextRank": 2035
+        },
+        "netherite2": {
+            "win": 6,
+            "loss": 45,
+            "draw": 10,
+            "nextRank": 2070
+        },
+        "netherite3": {
+            "win": 6,
+            "loss": 45,
+            "draw": 10
         }
     }
-}
+ }

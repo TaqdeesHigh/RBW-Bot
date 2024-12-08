@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const config = require('../../config.json');
 const { query } = require('../../database');
 
@@ -87,12 +87,7 @@ module.exports = {
         }
 
         try {
-            // First check if game is already submitted
-            const gameStatus = await query('games', 'findOne', { game_number: gameNumber });
-            if (gameStatus && (gameStatus.status === 'submitted' || gameStatus.status === 'completed')) {
-                return interaction.editReply('This game has already been submitted and cannot be submitted again.');
-            }
-        
+            // Update game record
             await query('games', 'updateOne', 
                 { game_number: gameNumber }, 
                 { 
@@ -103,9 +98,7 @@ module.exports = {
                         proof_image: proofImage.url,
                         bed_breaker: bedBreaker.id,
                         team1_members: JSON.stringify(team1Players),
-                        team2_members: JSON.stringify(team2Players),
-                        // submitted_at: new Date(),
-                        // submitted_by: interaction.user.id
+                        team2_members: JSON.stringify(team2Players)
                     }
                 }
             );
@@ -115,24 +108,23 @@ module.exports = {
             if (!gameLogsChannel) {
                 return interaction.editReply('Error: Games log channel not found.');
             }
-
+        
             const embed = new EmbedBuilder()
                 .setColor('#FFFF00')
                 .setTitle(`Game #${gameNumber} Submitted for Review`)
                 .setDescription(`Game Mode: ${gameMode}`)
                 .addFields(
-                    { name: 'Winning Team', value: winningTeam },
+                    { name: 'Winning Team', value: winningTeam === 'team1' ? 'Team 1' : 'Team 2' },
                     { name: 'MVP', value: `<@${mvp.id}>` },
                     { name: 'Bed Breaker', value: `<@${bedBreaker.id}>` }
                 )
                 .setImage(proofImage.url)
                 .setTimestamp()
                 .setFooter({ text: `Submitted by ${interaction.user.tag}` });
-
+        
             await gameLogsChannel.send({ embeds: [embed] });
-
             await interaction.editReply('Game submitted for review. An admin will process the score soon.');
-
+        
         } catch (error) {
             console.error('Error submitting game:', error);
             await interaction.editReply('Failed to submit game. Please contact an administrator.');

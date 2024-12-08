@@ -2,75 +2,111 @@ const { ChannelType, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, Button
 const { query } = require('../../database');
 const { sendUnregisteredWarning } = require('../Warnings/warning');
 const crypto = require('crypto');
+const config = require('../../config.json');
+
+const queueCooldowns = new Map();
+const userStatusCache = new Map();
 
 module.exports = {
   name: 'voiceStateUpdate',
   async execute(oldState, newState, client) {
     try {
-      // Only handle when someone joins a channel
-      if (!oldState.channelId && newState.channelId) {
-        const channel = newState.channel;
-        const guildId = newState.guild.id;
+      if (!newState.channelId) return;
+      
+      const channel = newState.channel;
+      const guildId = newState.guild.id;
+      const member = newState.member;
 
-        console.log(`Voice state update: User ${newState.member.user.tag} joined channel ${channel.name}`);
+      const channelData = await getChannelData(guildId);
+      if (!channelData) return;
 
-        const channelData = await getChannelData(guildId);
-        if (!channelData) {
-          console.log('No channel data found for guild:', guildId);
+      const gamemodeChannels = {
+        '4v4': channelData.channel_4v4,
+        '3v3': channelData.channel_3v3,
+        '2v2': channelData.channel_2v2
+      };
+
+      const gamemode = Object.keys(gamemodeChannels).find(mode => gamemodeChannels[mode] === channel.id);
+      if (!gamemode) return;
+
+      // Immediately check user status when they join
+      if (oldState.channelId !== newState.channelId) {
+        const issues = await checkUserStatus(member.id);
+        
+        if (issues.type === 'unregistered') {
+          await sendUnregisteredWarning(channel, [member], gamemode);
           return;
         }
-        
-        const gamemodeChannels = {
-          '4v4': channelData.channel_4v4,
-          '3v3': channelData.channel_3v3,
-          '2v2': channelData.channel_2v2
-        };
 
-        console.log('Current channel:', channel.id);
-        console.log('Available gamemode channels:', gamemodeChannels);
+        if (issues.type === 'banned') {
+          const embed = new EmbedBuilder()
+            .setColor('#FF0000')
+            .setTitle('Banned User')
+            .setDescription(`${member.displayName} is banned from participating. Reason: ${issues.reason || 'No reason provided.'}`)
+            .setTimestamp()
+            .setFooter({ text: `Game Mode: ${gamemode}`, iconURL: newState.guild.iconURL() });
 
-        const gamemode = Object.keys(gamemodeChannels).find(mode => gamemodeChannels[mode] === channel.id);
-        if (!gamemode) {
-          console.log('Not a gamemode channel');
+          await channel.send({ embeds: [embed] });
           return;
         }
 
-        console.log(`Detected gamemode: ${gamemode}`);
+        // Cache the user's status
+        userStatusCache.set(member.id, issues);
+      }
+
+      // Queue logic starts here
+      const cooldownTime = queueCooldowns.get(member.id);
+      if (cooldownTime && Date.now() < cooldownTime) {
+        const remainingTime = Math.ceil((cooldownTime - Date.now()) / 1000);
+        const embed = new EmbedBuilder()
+          .setColor('#FF0000')
+          .setTitle('Queue Cooldown')
+          .setDescription(`You must wait ${remainingTime} seconds before queuing for another game.`)
+          .setTimestamp();
         
-        const requiredPlayers = parseInt(gamemode.charAt(0)) * 2;
-        console.log(`Required players: ${requiredPlayers}, Current players: ${channel.members.size}`);
+        await channel.send({ embeds: [embed], content: member.toString() });
+        return;
+      }
 
-        if (channel.members.size === requiredPlayers) {
-          const issues = await checkRegisteredUsers(channel.members);
+      const activeGame = await checkActiveGame(member.id);
+      if (activeGame) {
+        const gameAge = Math.floor((Date.now() - new Date(activeGame.created_at).getTime()) / 1000);
+        const timeLeft = Math.max(0, 30 - gameAge);
+        
+        const embed = new EmbedBuilder()
+          .setColor('#FF0000')
+          .setTitle('Already in Queue')
+          .setDescription(`You are in game #${activeGame.game_number}. Please wait ${timeLeft} seconds before queuing for another game.`)
+          .setTimestamp();
+        
+        await channel.send({ embeds: [embed], content: member.toString() });
+        return;
+      }
 
-          const unregistered = issues.filter(issue => issue.type === 'unregistered').map(issue => issue.member);
-          const banned = issues.filter(issue => issue.type === 'banned').map(issue => issue.member);
+      const requiredPlayers = parseInt(gamemode.charAt(0)) * 2;
+      if (channel.members.size === requiredPlayers) {
+        // Quick check if any member is in active game
+        const memberPromises = Array.from(channel.members.keys()).map(memberId => checkActiveGame(memberId));
+        const activeGames = await Promise.all(memberPromises);
+        
+        if (activeGames.some(game => game !== null)) {
+          const embed = new EmbedBuilder()
+            .setColor('#FF0000')
+            .setTitle('Queue Error')
+            .setDescription('One or more players are already in a queued game.')
+            .setTimestamp();
+          
+          await channel.send({ embeds: [embed] });
+          return;
+        }
 
-          if (unregistered.length > 0) {
-            await sendUnregisteredWarning(channel, unregistered, gamemode);
-            return;
-          }
-
-          if (banned.length > 0) {
-            const bannedMessages = banned.map(ban => `${ban.displayName} is banned from participating. Reason: ${ban.reason || 'No reason provided.'}`);
-            
-            const embed = new EmbedBuilder()
-              .setColor('#FF0000')
-              .setTitle('Banned Users')
-              .setDescription('The following players are currently banned from participating in the game:')
-              .addFields(
-                { name: 'Banned Players', value: bannedMessages.join('\n') }
-              )
-              .setTimestamp()
-              .setFooter({ text: `Game Mode: ${gamemode}`, iconURL: newState.guild.iconURL() });
-
-            await channel.send({ embeds: [embed] });
-            return;
-          }
-
-          if (unregistered.length === 0 && banned.length === 0) {
-            await createQueuedGame(newState.guild, channel.members, gamemode, client);
-          }
+        await createQueuedGame(newState.guild, channel.members, gamemode, client);
+        
+        // Set 15-second cooldown for all members
+        const cooldownDuration = 15000; // 15 seconds
+        for (const [memberId] of channel.members) {
+          queueCooldowns.set(memberId, Date.now() + cooldownDuration);
+          setTimeout(() => queueCooldowns.delete(memberId), cooldownDuration);
         }
       }
     } catch (error) {
@@ -78,6 +114,66 @@ module.exports = {
     }
   },
 };
+
+async function checkActiveGame(userId) {
+  try {
+    const sql = `
+      SELECT game_number, status, created_at 
+      FROM games 
+      WHERE (
+        JSON_CONTAINS(team1_members, ?) 
+        OR JSON_CONTAINS(team2_members, ?)
+      )
+      AND status = 'queued'
+      AND TIMESTAMPDIFF(SECOND, created_at, NOW()) <= 30
+      LIMIT 1
+    `;
+    const result = await query(null, 'raw', sql, [JSON.stringify(userId), JSON.stringify(userId)]);
+    
+    if (result.length === 0) {
+      return null;
+    }
+
+    // If the game is older than 30 seconds, allow new queue
+    const gameAge = Math.floor((Date.now() - new Date(result[0].created_at).getTime()) / 1000);
+    if (gameAge > 30) {
+      return null;
+    }
+
+    return result[0];
+  } catch (error) {
+    console.error('Error checking active game:', error);
+    return null;
+  }
+}
+async function checkUserStatus(userId) {
+  try {
+    const isRegistered = await query('registered', 'findOne', { discord_id: userId });
+    if (!isRegistered) {
+      return { type: 'unregistered' };
+    }
+
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const sql = `
+      SELECT * 
+      FROM punishments 
+      WHERE discord_id = ? 
+        AND type = 'ban' 
+        AND expiration > ?
+      LIMIT 1
+    `;
+    const activeBan = await query(null, 'raw', sql, [userId, now]);
+
+    if (activeBan.length > 0) {
+      return { type: 'banned', reason: activeBan[0].reason };
+    }
+
+    return { type: 'ok' };
+  } catch (error) {
+    console.error('Error checking user status:', error);
+    return { type: 'error' };
+  }
+}
 
 async function getChannelData(guildId) {
   try {
@@ -88,46 +184,10 @@ async function getChannelData(guildId) {
   }
 }
 
-async function checkRegisteredUsers(members) {
-  const issues = [];
-
-  try {
-    for (const [id, member] of members) {
-      const isRegistered = await query('registered', 'findOne', { discord_id: id });
-      if (!isRegistered) {
-        issues.push({ type: 'unregistered', member });
-        continue;
-      }
-
-      const now = new Date();
-      const formattedNow = now.toISOString().slice(0, 19).replace('T', ' ');
-
-      const sql = `
-        SELECT * 
-        FROM punishments 
-        WHERE discord_id = ? 
-          AND type = 'ban' 
-          AND expiration > ?
-        LIMIT 1
-      `;
-      const activeBan = await query(null, 'raw', sql, [id, formattedNow]);
-
-      if (activeBan.length > 0) {
-        issues.push({ type: 'banned', member, reason: activeBan[0].reason });
-      }
-    }
-  } catch (error) {
-    console.error('Error checking registered users:', error);
-  }
-
-  return issues;
-}
-
 async function createQueuedGame(guild, members, gamemode, client) {
   const gameNumber = generateGameNumber();
 
   try {
-    // Store original members immediately
     const originalMemberIds = Array.from(members.keys());
     const halfSize = Math.ceil(originalMemberIds.length / 2);
     
@@ -151,6 +211,14 @@ async function createQueuedGame(guild, members, gamemode, client) {
           allow: [PermissionsBitField.Flags.ViewChannel],
           deny: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
         },
+        {
+          id: config.scorerID,
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+        },
+        {
+          id: config.rbwStaffID,
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+        },
         ...Array.from(members.values()).map(member => ({
           id: member.id,
           allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
@@ -168,6 +236,14 @@ async function createQueuedGame(guild, members, gamemode, client) {
           allow: [PermissionsBitField.Flags.ViewChannel],
           deny: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
         },
+        {
+          id: config.scorerID,
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+        },
+        {
+          id: config.rbwStaffID,
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
+        },
         ...Array.from(members.values()).map(member => ({
           id: member.id,
           allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
@@ -182,11 +258,19 @@ async function createQueuedGame(guild, members, gamemode, client) {
       permissionOverwrites: [
         {
           id: guild.id,
-          deny: [PermissionsBitField.Flags.ViewChannel], // Hide from everyone
+          deny: [PermissionsBitField.Flags.ViewChannel],
+        },
+        {
+          id: config.scorerID,
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
+        },
+        {
+          id: config.rbwStaffID,
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
         },
         ...Array.from(members.values()).map(member => ({
           id: member.id,
-          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages], // Only queue members can see and send messages
+          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
         })),
       ],
     });
@@ -200,14 +284,13 @@ async function createQueuedGame(guild, members, gamemode, client) {
       }}
     );
 
-    // Try to move members who are in voice channels
     for (const member of members.values()) {
       try {
         if (member.voice?.channel) {
           await member.voice.setChannel(voiceChannel);
         }
       } catch (error) {
-        console.log(`Note: Couldn't move ${member.user.tag} to game channel - they may have left voice`);
+        console.log(`Note: Couldn't move ${member.user.tag} to game channel`);
       }
     }
 
@@ -230,8 +313,6 @@ async function createQueuedGame(guild, members, gamemode, client) {
       );
     
     await textChannel.send({ embeds: [embed], components: [row] });
-
-    console.log(`Created queued game for ${gamemode} with number: ${gameNumber}`);
   } catch (error) {
     console.error('Error creating queued game:', error);
     throw error;

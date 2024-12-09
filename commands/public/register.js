@@ -31,13 +31,16 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    // Defer the reply immediately to prevent timeout
+    await interaction.deferReply();
+
     if (interaction.channelId !== config.registerChannelID) {
       const embed = createEmbed(
         'Wrong Channel',
         'Please use this command in the registration channel.',
         '#FF0000'
       );
-      return await interaction.reply({ embeds: [embed] });
+      return await interaction.editReply({ embeds: [embed] });
     }
 
     const name = interaction.options.getString("name");
@@ -48,7 +51,7 @@ module.exports = {
         const playerResponse = await axios.get(`https://api.ngmc.co/v1/players/${name}`);
         if (playerResponse.data.banned === true) {
           const embed = createEmbed('Registration Failed', 'You are banned from the server.', '#FF0000');
-          return await interaction.reply({ embeds: [embed] });
+          return await interaction.editReply({ embeds: [embed] });
         }
       } catch (error) {
         if (error.response && error.response.status === 404) {
@@ -57,23 +60,22 @@ module.exports = {
             'This player does not exist.', 
             '#FF0000'
           );
-          return await interaction.reply({ embeds: [embed] });
+          return await interaction.editReply({ embeds: [embed] });
         }
+        throw error;
       }
 
       // Check if user is already registered
       const discorduser = await query('registered', 'findOne', { discord_id: interaction.user.id });
       if (discorduser) {
         const embed = createEmbed('Registration Failed', 'You are already registered.', config.embedCorrect);
-        return await interaction.reply({ embeds: [embed] });
+        return await interaction.editReply({ embeds: [embed] });
       }
 
       // Check if MC account is already registered
       const mcuser = await query('registered', 'findOne', { mc_user: name });
       if (mcuser) {
-        // If the MC account is registered, check if it belongs to the same Discord user
         if (mcuser.discord_id === interaction.user.id) {
-          // Update the registration with new Discord username if it changed
           await query('registered', 'updateOne', 
             { mc_user: name },
             { $set: { discord_user: interaction.user.username } }
@@ -84,12 +86,12 @@ module.exports = {
             `Your registration as ${name} has been updated.`, 
             config.embedCorrect
           );
-          await interaction.reply({ embeds: [embed] });
+          await interaction.editReply({ embeds: [embed] });
           await updateEloAndNickname(interaction.user.id, interaction.guild);
           return;
         } else {
           const embed = createEmbed('Registration Failed', 'Player already registered by another user.', config.embedCorrect);
-          return await interaction.reply({ embeds: [embed] });
+          return await interaction.editReply({ embeds: [embed] });
         }
       }
 
@@ -120,10 +122,7 @@ module.exports = {
         config.embedCorrect
       );
       
-      // Send the reply first
-      await interaction.reply({ embeds: [embed] });
-      
-      // Then update the nickname and ELO
+      await interaction.editReply({ embeds: [embed] });
       await updateEloAndNickname(interaction.user.id, interaction.guild);
 
     } catch (error) {
@@ -134,9 +133,10 @@ module.exports = {
         '#FF0000'
       );
       
-      // Check if we can still reply to the interaction
-      if (!interaction.replied) {
-        await interaction.reply({ embeds: [embed] });
+      try {
+        await interaction.editReply({ embeds: [embed] });
+      } catch (e) {
+        console.error('Error sending error message:', e);
       }
     }
   },

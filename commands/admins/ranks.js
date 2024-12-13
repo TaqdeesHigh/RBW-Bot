@@ -7,248 +7,155 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        await interaction.deferReply();
+        try {
+            await interaction.deferReply();
+            
+            const embedPages = [
+                createMainEmbed(interaction),
+                createSecondEmbed(),
+                createThirdEmbed(),
+                createFourthEmbed(),
+                createFinalEmbed()
+            ];
 
-        const embed = new EmbedBuilder()
-            .setTitle('Zomire Ranking System')
-            .setDescription('```A complete guide showing all ranks and their ELO requirements```')
-            .setColor('#ff0000')
-            .setFooter({ 
-                text: 'Zomire', 
-                iconURL: interaction.guild.iconURL({ dynamic: true }) 
-            })
-            .setTimestamp()
-            .addFields(
-                {
-                    name: '𝗕𝗿𝗼𝗻𝘇𝗲 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Bronze I [0-34 ELO]
-* Win: +30 | Loss: -10 | Draw: +5
-
-# Bronze II [35-69 ELO]
-* Win: +28 | Loss: -12 | Draw: +5
-
-# Bronze III [70-99 ELO]
-* Win: +26 | Loss: -14 | Draw: +5\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗦𝗶𝗹𝘃𝗲𝗿 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Silver I [100-134 ELO]
-* Win: +24 | Loss: -16 | Draw: +6
-
-# Silver II [135-169 ELO]
-* Win: +22 | Loss: -18 | Draw: +6
-
-# Silver III [170-199 ELO]
-* Win: +20 | Loss: -20 | Draw: +6\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗚𝗼𝗹𝗱 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Gold I [200-234 ELO]
-* Win: +18 | Loss: -22 | Draw: +7
-
-# Gold II [235-269 ELO]
-* Win: +16 | Loss: -24 | Draw: +7
-
-# Gold III [270-299 ELO]
-* Win: +15 | Loss: -26 | Draw: +7\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗣𝗹𝗮𝘁𝗶𝗻𝘂𝗺 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Platinum I [300-334 ELO]
-* Win: +14 | Loss: -28 | Draw: +8
-
-# Platinum II [335-369 ELO]
-* Win: +13 | Loss: -30 | Draw: +8
-
-# Platinum III [370-399 ELO]
-* Win: +12 | Loss: -32 | Draw: +8\`\`\``,
-                    inline: false
-                }
-            );
-
-        const embed2 = new EmbedBuilder()
-            .setColor('#ff0000')
-            .addFields(
-                {
-                    name: '𝗗𝗶𝗮𝗺𝗼𝗻𝗱 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Diamond I [400-434 ELO]
-* Win: +11 | Loss: -34 | Draw: +9
-
-# Diamond II [435-469 ELO]
-* Win: +10 | Loss: -36 | Draw: +9
-
-# Diamond III [470-499 ELO]
-* Win: +9 | Loss: -38 | Draw: +9\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗘𝗺𝗲𝗿𝗮𝗹𝗱 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Emerald I [500-534 ELO]
-* Win: +8 | Loss: -40 | Draw: +10
-
-# Emerald II [535-569 ELO]
-* Win: +7 | Loss: -42 | Draw: +10
-
-# Emerald III [570-599 ELO]
-* Win: +6 | Loss: -45 | Draw: +10\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗦𝗮𝗽𝗽𝗵𝗶𝗿𝗲 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Sapphire I [600-634 ELO]
-* Win: +8 | Loss: -40 | Draw: +10
-
-# Sapphire II [635-669 ELO]
-* Win: +7 | Loss: -42 | Draw: +10
-
-# Sapphire III [670-699 ELO]
-* Win: +6 | Loss: -44 | Draw: +10\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗥𝘂𝗯𝘆 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Ruby I [700-734 ELO]
-* Win: +8 | Loss: -40 | Draw: +10
-
-# Ruby II [735-769 ELO]
-* Win: +7 | Loss: -42 | Draw: +10
-
-# Ruby III [770-799 ELO]
-* Win: +6 | Loss: -44 | Draw: +10\`\`\``,
-                    inline: false
-                }
-            );
-
-        const embed3 = new EmbedBuilder()
-            .setColor('#ff0000')
-            .addFields(
-                {
-                    name: '𝗖𝗿𝘆𝘀𝘁𝗮𝗹 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Crystal I [800-834 ELO]
-* Win: +6 | Loss: -44 | Draw: +10
-
-# Crystal II [835-869 ELO]
-* Win: +5 | Loss: -45 | Draw: +10
-
-# Crystal III [870-899 ELO]
-* Win: +5 | Loss: -45 | Draw: +10\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗢𝗽𝗮𝗹 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Opal I [900-934 ELO]
-* Win: +5 | Loss: -45 | Draw: +10
-
-# Opal II [935-969 ELO]
-* Win: +4 | Loss: -46 | Draw: +10
-
-# Opal III [970-999 ELO]
-* Win: +4 | Loss: -46 | Draw: +10\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗔𝗺𝗲𝘁𝗵𝘆𝘀𝘁 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Amethyst I [1000-1129 ELO]
-* Win: +4 | Loss: -46 | Draw: +10
-
-# Amethyst II [1130-1164 ELO]
-* Win: +3 | Loss: -47 | Draw: +10
-
-# Amethyst III [1165-1199 ELO]
-* Win: +3 | Loss: -47 | Draw: +10\`\`\``,
-                    inline: false
-                }
-            );
-
-        const embed4 = new EmbedBuilder()
-            .setColor('#ff0000')
-            .addFields(
-                {
-                    name: '𝗢𝗯𝘀𝗶𝗱𝗶𝗮𝗻 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Obsidian I [1200-1234 ELO]
-* Win: +3 | Loss: -47 | Draw: +10
-
-# Obsidian II [1235-1269 ELO]
-* Win: +2 | Loss: -48 | Draw: +10
-
-# Obsidian III [1270-1399 ELO]
-* Win: +2 | Loss: -48 | Draw: +10\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗩𝗲𝘁𝗲𝗿𝗮𝗻 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Veteran I [1400-1434 ELO]
-* Win: +2 | Loss: -48 | Draw: +10
-
-# Veteran II [1435-1469 ELO]
-* Win: +1 | Loss: -49 | Draw: +10
-
-# Veteran III [1470-1599 ELO]
-* Win: +1 | Loss: -49 | Draw: +10\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗤𝘂𝗮𝗿𝘁𝘇 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Quartz I [1600-1634 ELO]
-* Win: +1 | Loss: -49 | Draw: +10
-
-# Quartz II [1635-1669 ELO]
-* Win: +1 | Loss: -49 | Draw: +10
-
-# Quartz III [1670-1799 ELO]
-* Win: +1 | Loss: -49 | Draw: +10\`\`\``,
-                    inline: false
-                }
-            );
-
-        const embed5 = new EmbedBuilder()
-            .setColor('#ff0000')
-            .addFields(
-                {
-                    name: '𝗧𝗼𝗽𝗮𝘇 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Topaz I [1800-1834 ELO]
-* Win: +1 | Loss: -49 | Draw: +10
-
-# Topaz II [1835-1869 ELO]
-* Win: +1 | Loss: -49 | Draw: +10
-
-# Topaz III [1870-1999 ELO]
-* Win: +1 | Loss: -49 | Draw: +10\`\`\``,
-                    inline: false
-                },
-                {
-                    name: '𝗡𝗲𝘁𝗵𝗲𝗿𝗶𝘁𝗲 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻',
-                    value: `\`\`\`md
-# Netherite I [2000-2034 ELO]
-* Win: +6 | Loss: -45 | Draw: +10
-
-# Netherite II [2035-2069 ELO]
-* Win: +6 | Loss: -45 | Draw: +10
-
-# Netherite III [2070+ ELO]
-* Win: +6 | Loss: -45 | Draw: +10\`\`\``,
-                    inline: false
-                }
-            );
-
-        await interaction.editReply({ embeds: [embed, embed2, embed3, embed4, embed5] });
+            await interaction.editReply({ embeds: embedPages });
+        } catch (error) {
+            console.error('Error in ranks command:', error);
+            await interaction.editReply({ content: 'There was an error displaying the ranks.' });
+        }
     },
 };
+
+function createDivisionField(divisionName, ranks) {
+    const rankText = ranks.map(rank => 
+        `# ${rank.name} [${rank.elo} ELO]\n* Win: +${rank.win} | Loss: -${rank.loss} | Draw: +${rank.draw}`
+    ).join('\n\n');
+    
+    return {
+        name: divisionName,
+        value: `\`\`\`md\n${rankText}\`\`\``,
+        inline: false
+    };
+}
+
+function createMainEmbed(interaction) {
+    return new EmbedBuilder()
+        .setTitle('Zomire Ranking System')
+        .setDescription('```A complete guide showing all ranks and their ELO requirements```')
+        .setColor('#ff0000')
+        .setTimestamp()
+        .setFooter({ 
+            text: 'Zomire', 
+            iconURL: interaction.guild.iconURL({ dynamic: true }) 
+        })
+        .addFields(
+            createDivisionField('𝗕𝗿𝗼𝗻𝘇𝗲 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Bronze I', elo: '0-34', win: 30, loss: 10, draw: 5 },
+                { name: 'Bronze II', elo: '35-69', win: 28, loss: 12, draw: 5 },
+                { name: 'Bronze III', elo: '70-99', win: 26, loss: 14, draw: 5 }
+            ]),
+            createDivisionField('𝗦𝗶𝗹𝘃𝗲𝗿 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Silver I', elo: '100-134', win: 24, loss: 16, draw: 6 },
+                { name: 'Silver II', elo: '135-169', win: 22, loss: 18, draw: 6 },
+                { name: 'Silver III', elo: '170-199', win: 20, loss: 20, draw: 6 }
+            ]),
+            createDivisionField('𝗚𝗼𝗹𝗱 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Gold I', elo: '200-234', win: 18, loss: 22, draw: 7 },
+                { name: 'Gold II', elo: '235-269', win: 16, loss: 24, draw: 7 },
+                { name: 'Gold III', elo: '270-299', win: 15, loss: 26, draw: 7 }
+            ]),
+            createDivisionField('𝗣𝗹𝗮𝘁𝗶𝗻𝘂𝗺 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Platinum I', elo: '300-334', win: 14, loss: 28, draw: 8 },
+                { name: 'Platinum II', elo: '335-369', win: 13, loss: 30, draw: 8 },
+                { name: 'Platinum III', elo: '370-399', win: 12, loss: 32, draw: 8 }
+            ])
+        );
+}
+
+function createSecondEmbed() {
+    return new EmbedBuilder()
+        .setColor('#ff0000')
+        .addFields(
+            createDivisionField('𝗗𝗶𝗮𝗺𝗼𝗻𝗱 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Diamond I', elo: '400-434', win: 11, loss: 34, draw: 9 },
+                { name: 'Diamond II', elo: '435-469', win: 10, loss: 36, draw: 9 },
+                { name: 'Diamond III', elo: '470-499', win: 9, loss: 38, draw: 9 }
+            ]),
+            createDivisionField('𝗘𝗺𝗲𝗿𝗮𝗹𝗱 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Emerald I', elo: '500-534', win: 8, loss: 40, draw: 10 },
+                { name: 'Emerald II', elo: '535-569', win: 7, loss: 42, draw: 10 },
+                { name: 'Emerald III', elo: '570-599', win: 6, loss: 45, draw: 10 }
+            ]),
+            createDivisionField('𝗦𝗮𝗽𝗽𝗵𝗶𝗿𝗲 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Sapphire I', elo: '600-634', win: 8, loss: 40, draw: 10 },
+                { name: 'Sapphire II', elo: '635-669', win: 7, loss: 42, draw: 10 },
+                { name: 'Sapphire III', elo: '670-699', win: 6, loss: 44, draw: 10 }
+            ]),
+            createDivisionField('𝗥𝘂𝗯𝘆 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Ruby I', elo: '700-734', win: 8, loss: 40, draw: 10 },
+                { name: 'Ruby II', elo: '735-769', win: 7, loss: 42, draw: 10 },
+                { name: 'Ruby III', elo: '770-799', win: 6, loss: 44, draw: 10 }
+            ])
+        );
+}
+
+function createThirdEmbed() {
+    return new EmbedBuilder()
+        .setColor('#ff0000')
+        .addFields(
+            createDivisionField('𝗖𝗿𝘆𝘀𝘁𝗮𝗹 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Crystal I', elo: '800-834', win: 6, loss: 44, draw: 10 },
+                { name: 'Crystal II', elo: '835-869', win: 5, loss: 45, draw: 10 },
+                { name: 'Crystal III', elo: '870-899', win: 5, loss: 45, draw: 10 }
+            ]),
+            createDivisionField('𝗢𝗽𝗮𝗹 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Opal I', elo: '900-934', win: 5, loss: 45, draw: 10 },
+                { name: 'Opal II', elo: '935-969', win: 4, loss: 46, draw: 10 },
+                { name: 'Opal III', elo: '970-999', win: 4, loss: 46, draw: 10 }
+            ]),
+            createDivisionField('𝗔𝗺𝗲𝘁𝗵𝘆𝘀𝘁 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Amethyst I', elo: '1000-1129', win: 4, loss: 46, draw: 10 },
+                { name: 'Amethyst II', elo: '1130-1164', win: 3, loss: 47, draw: 10 },
+                { name: 'Amethyst III', elo: '1165-1199', win: 3, loss: 47, draw: 10 }
+            ])
+        );
+}
+
+function createFourthEmbed() {
+    return new EmbedBuilder()
+        .setColor('#ff0000')
+        .addFields(
+            createDivisionField('𝗢𝗯𝘀𝗶𝗱𝗶𝗮𝗻 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Obsidian I', elo: '1200-1234', win: 3, loss: 47, draw: 10 },
+                { name: 'Obsidian II', elo: '1235-1269', win: 2, loss: 48, draw: 10 },
+                { name: 'Obsidian III', elo: '1270-1399', win: 2, loss: 48, draw: 10 }
+            ]),
+            createDivisionField('𝗩𝗲𝘁𝗲𝗿𝗮𝗻 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Veteran I', elo: '1400-1434', win: 2, loss: 48, draw: 10 },
+                { name: 'Veteran II', elo: '1435-1469', win: 1, loss: 49, draw: 10 },
+                { name: 'Veteran III', elo: '1470-1599', win: 1, loss: 49, draw: 10 }
+            ]),
+            createDivisionField('𝗤𝘂𝗮𝗿𝘁𝘇 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Quartz I', elo: '1600-1634', win: 1, loss: 49, draw: 10 },
+                { name: 'Quartz II', elo: '1635-1669', win: 1, loss: 49, draw: 10 },
+                { name: 'Quartz III', elo: '1670-1799', win: 1, loss: 49, draw: 10 }
+            ])
+        );
+}
+
+function createFinalEmbed() {
+    return new EmbedBuilder()
+        .setColor('#ff0000')
+        .addFields(
+            createDivisionField('𝗧𝗼𝗽𝗮𝘇 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Topaz I', elo: '1800-1834', win: 1, loss: 49, draw: 10 },
+                { name: 'Topaz II', elo: '1835-1869', win: 1, loss: 49, draw: 10 },
+                { name: 'Topaz III', elo: '1870-1999', win: 1, loss: 49, draw: 10 }
+            ]),
+            createDivisionField('𝗡𝗲𝘁𝗵𝗲𝗿𝗶𝘁𝗲 𝗗𝗶𝘃𝗶𝘀𝗶𝗼𝗻', [
+                { name: 'Netherite I', elo: '2000-2034', win: 6, loss: 45, draw: 10 },
+                { name: 'Netherite II', elo: '2035-2069', win: 6, loss: 45, draw: 10 },
+                { name: 'Netherite III', elo: '2070+', win: 6, loss: 45, draw: 10 }
+            ])
+        );
+}

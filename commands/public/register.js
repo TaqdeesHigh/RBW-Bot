@@ -62,7 +62,13 @@ module.exports = {
           );
           return await interaction.editReply({ embeds: [embed] });
         }
-        throw error;
+        // Handle other errors without throwing
+        const embed = createEmbed(
+          'Registration Failed',
+          'An error occurred please try again.',
+          '#FF0000'
+        );
+        return await interaction.editReply({ embeds: [embed] });
       }
 
       // Check if user is already registered

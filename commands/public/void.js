@@ -36,10 +36,11 @@ async function safeSendMessage(channel, content) {
             return await channel.send(content);
         }
     } catch (error) {
-        if (error.code !== 10003) {
+        if (error.code !== 10003) { // Ignore "Unknown Channel" errors
             console.error(`Error sending message: ${error}`);
         }
     }
+    return null;
 }
 
 module.exports = {

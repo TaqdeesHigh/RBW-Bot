@@ -68,23 +68,39 @@ module.exports = {
         return;
       }
 
-      const activeGame = await checkActiveGame(member.id);
-      if (activeGame) {
-        const gameAge = Math.floor((Date.now() - new Date(activeGame.created_at).getTime()) / 1000);
-        const timeLeft = Math.max(0, 30 - gameAge);
-        
-        const embed = new EmbedBuilder()
-          .setColor('#FF0000')
-          .setTitle('Already in Queue')
-          .setDescription(`You are in game #${activeGame.game_number}. Please wait ${timeLeft} seconds before queuing for another game.`)
-          .setTimestamp();
-        
-        await channel.send({ embeds: [embed], content: member.toString() });
-        return;
-      }
-
       const requiredPlayers = parseInt(gamemode.charAt(0)) * 2;
       if (channel.members.size === requiredPlayers) {
+        // Check if any member is unregistered
+        const memberStatuses = await Promise.all(
+          Array.from(channel.members.values()).map(member => checkUserStatus(member.id))
+        );
+        
+        if (memberStatuses.some(status => status.type === 'unregistered')) {
+          const unregisteredMembers = channel.members.filter((member, index) => 
+            memberStatuses[index].type === 'unregistered'
+          );
+          await sendUnregisteredWarning(channel, Array.from(unregisteredMembers.values()), gamemode);
+          return;
+        }
+
+        if (memberStatuses.some(status => status.type === 'banned')) {
+          const bannedMembers = channel.members.filter((member, index) => 
+            memberStatuses[index].type === 'banned'
+          );
+          for (const member of bannedMembers.values()) {
+            const status = memberStatuses.find(s => s.type === 'banned');
+            const embed = new EmbedBuilder()
+              .setColor('#FF0000')
+              .setTitle('Banned User')
+              .setDescription(`${member.displayName} is banned from participating. Reason: ${status.reason || 'No reason provided.'}`)
+              .setTimestamp()
+              .setFooter({ text: `Game Mode: ${gamemode}`, iconURL: newState.guild.iconURL() });
+
+            await channel.send({ embeds: [embed] });
+          }
+          return;
+        }
+
         // Quick check if any member is in active game
         const memberPromises = Array.from(channel.members.keys()).map(memberId => checkActiveGame(memberId));
         const activeGames = await Promise.all(memberPromises);
@@ -186,6 +202,26 @@ async function getChannelData(guildId) {
 
 async function createQueuedGame(guild, members, gamemode, client) {
   const gameNumber = generateGameNumber();
+
+  for (const [memberId, member] of members) {
+    const userStatus = await checkUserStatus(memberId);
+    if (userStatus.type === 'unregistered') {
+      // If any member is unregistered, send warning and don't create the game
+      await sendUnregisteredWarning(member.voice.channel, [member], gamemode);
+      return;
+    }
+    if (userStatus.type === 'banned') {
+      const embed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setTitle('Banned User')
+        .setDescription(`${member.displayName} is banned from participating. Reason: ${userStatus.reason || 'No reason provided.'}`)
+        .setTimestamp()
+        .setFooter({ text: `Game Mode: ${gamemode}`, iconURL: guild.iconURL() });
+
+      await member.voice.channel.send({ embeds: [embed] });
+      return;
+    }
+  }
 
   try {
     const originalMemberIds = Array.from(members.keys());

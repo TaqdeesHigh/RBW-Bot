@@ -11,37 +11,6 @@ A comprehensive Discord bot for managing ranked bedwars matches with auto-queuin
  - Random assignment
  - Manual team choosing
 
-### Commands
-
-#### Player Commands
-- `/leaderboard` - View rankings by elo, bedbreaks, wins, losses, and WLR
-- `/register` - Register as a player
-- `/stats` - Check your statistics 
-- `/submit` - Submit game results
-- `/unregister` - Remove yourself from the system
-- `/void` - Void an ongoing game
-
-#### Admin Commands
-- `/ban` - Restrict players from queuing
-- `/elo`
- - `add` - Add elo points
- - `remove` - Remove elo points
- - `fix` - Verify and correct elo calculations
-- `/force_register` - Manually register users
-- `/force_unregister` - Manually unregister users
-- `/fv` (force void) - Administratively void games
-- `/score` - Record game scores
-- `/strike`
- - `give` - Issue strikes
- - `remove` - Remove strikes
- - `edit` - Modify strikes
-- `/unban` - Remove queue restrictions
-- `/updateGamemodeChannels` - Set up required queuing channels
-
-## NOTE: Yeah, there’s more commands—so what?  
-## Slammed this together with ChatGPT in 5 minutes. Babysit it? Nah.  
-## Wanna update it? Do it yourself, champ. I’m out.  
-
 ## Installation
 
 1. Clone the repository
@@ -101,41 +70,13 @@ Logged in as {Bot-Name}
 .-------------------------------.
 |        Events        | Status |
 |----------------------|--------|
-| buttonInteraction.js | ✅      |
-| ready.js             | ✅      |
-| updateNickName.js    | ✅      |
-| guildCreate.js       | ✅      |
-| interactionCreate.js | ✅      |
-| unbanJob.js          | ✅      |
-| gameLogger.js        | ✅      |
-| ChooseTeams.js       | ✅      |
-| RandomTeam.js        | ✅      |
-| voiceStateUpdate.js  | ✅      |
-| banned.js            | ✅      |
-| warning.js           | ✅      |
+| All events           |   ✅   |
 '-------------------------------'
 Loaded events
 .------------------------------------.
 |         Commands          | Status |
 |---------------------------|--------|
-| ban.js                    | ✅      |
-| Elo.js                    | ✅      |
-| fix.js                    | ✅      |
-| forceRegister.js          | ✅      |
-| forceUnregister.js        | ✅      |
-| fv.js                     | ✅      |
-| score.js                  | ✅      |
-| strike.js                 | ✅      |
-| unban.js                  | ✅      |
-| updateGamemodeChannels.js | ✅      |
-| leaderboard.js            | ✅      |
-| register.js               | ✅      |
-| ss.js                     | ✅      |
-| stats.js                  | ✅      |
-| submit.js                 | ✅      |
-| test.js                   | ✅      |
-| unregister.js             | ✅      |
-| void.js                   | ✅      |
+| All Commands              |   ✅   |
 '------------------------------------'
 Loaded Commands
 Bot is ready!

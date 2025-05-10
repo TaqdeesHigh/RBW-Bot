@@ -1,4 +1,4 @@
-# RBW Discord Bot
+# RBW Discord Bot (CURRENTLY BROKEN AND NOT RECOMMENDED FOR PRODUCTION USE!)
 
 A comprehensive Discord bot for managing ranked bedwars matches with auto-queuing functionality, team selection, and extensive stat tracking.
 
